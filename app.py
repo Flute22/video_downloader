@@ -21,7 +21,10 @@ if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
 # Path to ffmpeg for merging video+audio
-FFMPEG_PATH = os.path.expanduser('~/AppData/Local/Microsoft/WinGet/Links')
+import shutil
+FFMPEG_PATH = shutil.which('ffmpeg')
+if not FFMPEG_PATH:
+    FFMPEG_PATH = os.path.expanduser('~/AppData/Local/Microsoft/WinGet/Links')
 
 class UniversalDownloader:
     def __init__(self):
