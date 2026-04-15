@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaGrab — Download Videos from 10+ Platforms</title>
+    <meta name="description" content="MediaGrab is a free, open-source desktop app to download videos from YouTube, Instagram, TikTok, Twitter/X, Facebook, Reddit and more. One click, no browser needed.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ── Reset & Base ──────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #050505;
+            color: #f5f5f5;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        a { color: inherit; text-decoration: none; }
+
+        /* ── Ambient Background Glow ──────────────────────── */
+        .ambient {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            overflow: hidden;
+        }
+        .ambient .orb {
+            position: absolute; border-radius: 50%; filter: blur(120px); opacity: .18;
+        }
+        .ambient .orb-1 { width: 600px; height: 600px; background: #f59e0b; top: -200px; left: -100px; animation: float1 18s ease-in-out infinite; }
+        .ambient .orb-2 { width: 500px; height: 500px; background: #ef4444; bottom: -150px; right: -80px; animation: float2 22s ease-in-out infinite; }
+        .ambient .orb-3 { width: 400px; height: 400px; background: #8b5cf6; top: 40%; left: 50%; animation: float3 20s ease-in-out infinite; }
+
+        @keyframes float1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(80px,60px); } }
+        @keyframes float2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-60px,-40px); } }
+        @keyframes float3 { 0%,100% { transform: translate(-50%,-50%); } 50% { transform: translate(-40%,-40%); } }
+
+        /* ── Layout ────────────────────────────────────────── */
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+        /* ── Navbar ────────────────────────────────────────── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(5,5,5,.72); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+        nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+        .logo { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; }
+        .logo span { color: #f59e0b; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a { font-size: .875rem; color: #a3a3a3; transition: color .2s; font-weight: 500; }
+        .nav-links a:hover { color: #f5f5f5; }
+        .nav-cta {
+            background: #f59e0b !important; color: #000 !important; padding: 8px 20px; border-radius: 8px;
+            font-weight: 600 !important; font-size: .875rem !important; transition: background .2s, transform .15s;
+        }
+        .nav-cta:hover { background: #d97706 !important; transform: translateY(-1px); }
+
+        /* ── Hero ──────────────────────────────────────────── */
+        .hero {
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; text-align: center; padding: 120px 24px 80px;
+        }
+        .badge {
+            display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px;
+            background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
+            border-radius: 100px; font-size: .8rem; color: #f59e0b; font-weight: 600;
+            margin-bottom: 28px; animation: fadeUp .7s ease-out;
+        }
+        .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+        .hero h1 {
+            font-size: clamp(2.8rem, 6vw, 4.5rem); font-weight: 900; letter-spacing: -2px;
+            line-height: 1.08; max-width: 750px; animation: fadeUp .7s ease-out .1s both;
+        }
+        .hero h1 .highlight {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 1.15rem; color: #a3a3a3; max-width: 540px; margin-top: 22px;
+            animation: fadeUp .7s ease-out .2s both;
+        }
+        .hero-actions {
+            display: flex; gap: 14px; margin-top: 40px; flex-wrap: wrap; justify-content: center;
+            animation: fadeUp .7s ease-out .3s both;
+        }
+        .btn {
+            display: inline-flex; align-items: center; gap: 10px; padding: 15px 32px;
+            border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer;
+            transition: all .25s; border: none; font-family: inherit;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b, #d97706); color: #000;
+            box-shadow: 0 0 30px rgba(245,158,11,.25);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(245,158,11,.35); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-secondary {
+            background: rgba(255,255,255,.06); color: #f5f5f5;
+            border: 1px solid rgba(255,255,255,.1);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,.1); transform: translateY(-2px); }
+
+        .hero-meta {
+            display: flex; gap: 36px; margin-top: 36px; color: #525252; font-size: .85rem;
+            animation: fadeUp .7s ease-out .4s both;
+        }
+        .hero-meta span { display: flex; align-items: center; gap: 6px; }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── App Preview ──────────────────────────────────── */
+        .preview-section { padding: 0 24px 100px; }
+        .preview-wrapper {
+            max-width: 860px; margin: 0 auto;
+            background: linear-gradient(145deg, rgba(245,158,11,.08), rgba(239,68,68,.05));
+            border: 1px solid rgba(255,255,255,.07); border-radius: 20px;
+            padding: 6px; animation: fadeUp .7s ease-out .5s both;
+        }
+        .preview-inner {
+            background: #111; border-radius: 16px; overflow: hidden;
+        }
+        /* Fake title bar */
+        .preview-titlebar {
+            display: flex; align-items: center; gap: 8px; padding: 14px 18px;
+            background: #1a1a1a; border-bottom: 1px solid rgba(255,255,255,.05);
+        }
+        .preview-titlebar .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .preview-titlebar .dot-r { background: #ef4444; }
+        .preview-titlebar .dot-y { background: #f59e0b; }
+        .preview-titlebar .dot-g { background: #22c55e; }
+        .preview-titlebar .title { margin-left: 12px; font-size: .8rem; color: #525252; }
+        .preview-body { padding: 32px 28px; }
+        .preview-body .fake-input {
+            display: flex; gap: 10px; align-items: center;
+        }
+        .preview-body .fake-url {
+            flex: 1; background: #242424; border: 1px solid #2e2e2e; border-radius: 10px;
+            padding: 14px 18px; font-size: .9rem; color: #525252; font-family: 'Inter', sans-serif;
+        }
+        .preview-body .fake-btn {
+            background: #f59e0b; color: #000; padding: 14px 24px; border-radius: 10px;
+            font-weight: 700; font-size: .9rem; white-space: nowrap;
+        }
+        .preview-body .fake-platforms {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px;
+        }
+        .preview-body .fake-badge {
+            padding: 8px 14px; background: #1a1a1a; border-radius: 8px;
+            font-size: .78rem; color: #a3a3a3;
+        }
+
+        /* ── Features ─────────────────────────────────────── */
+        .features { padding: 80px 24px 100px; }
+        .section-label {
+            text-align: center; font-size: .8rem; font-weight: 700; color: #f59e0b;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;
+        }
+        .section-title {
+            text-align: center; font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800;
+            letter-spacing: -1px; margin-bottom: 56px;
+        }
+        .features-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
+            border-radius: 16px; padding: 32px 28px; transition: all .3s;
+        }
+        .feature-card:hover {
+            background: rgba(255,255,255,.05); border-color: rgba(245,158,11,.2);
+            transform: translateY(-4px);
+        }
+        .feature-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; margin-bottom: 18px;
+        }
+        .feature-icon.amber { background: rgba(245,158,11,.12); }
+        .feature-icon.red   { background: rgba(239,68,68,.12); }
+        .feature-icon.green { background: rgba(34,197,94,.12); }
+        .feature-icon.purple { background: rgba(139,92,246,.12); }
+        .feature-icon.blue  { background: rgba(59,130,246,.12); }
+        .feature-icon.pink  { background: rgba(236,72,153,.12); }
+
+        .feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+        .feature-card p { font-size: .9rem; color: #a3a3a3; line-height: 1.6; }
+
+        /* ── Platforms ────────────────────────────────────── */
+        .platforms { padding: 40px 24px 100px; }
+        .platforms-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 14px; max-width: 800px; margin: 0 auto;
+        }
+        .platform-chip {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+            border-radius: 12px; padding: 16px 18px; transition: all .25s; cursor: default;
+        }
+        .platform-chip:hover { background: rgba(255,255,255,.07); transform: translateY(-2px); }
+        .platform-chip .p-icon { font-size: 1.3rem; }
+        .platform-chip .p-name { font-size: .9rem; font-weight: 600; }
+
+        /* ── Download / CTA Section ───────────────────────── */
+        .cta-section { padding: 60px 24px 120px; }
+        .cta-card {
+            max-width: 700px; margin: 0 auto; text-align: center;
+            background: linear-gradient(145deg, rgba(245,158,11,.08), rgba(239,68,68,.04));
+            border: 1px solid rgba(245,158,11,.15); border-radius: 24px;
+            padding: 60px 40px;
+        }
+        .cta-card h2 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 14px; }
+        .cta-card p { color: #a3a3a3; font-size: 1rem; margin-bottom: 32px; }
+        .cta-card .btn-primary { font-size: 1.1rem; padding: 18px 40px; }
+        .cta-info { margin-top: 20px; font-size: .82rem; color: #525252; }
+
+        /* ── Footer ───────────────────────────────────────── */
+        footer {
+            border-top: 1px solid rgba(255,255,255,.06); padding: 40px 24px;
+            text-align: center; color: #525252; font-size: .85rem;
+        }
+        footer .logo { margin-bottom: 8px; display: inline-block; }
+
+        /* ── Responsive ───────────────────────────────────── */
+        @media (max-width: 640px) {
+            .nav-links a:not(.nav-cta) { display: none; }
+            .hero-meta { flex-direction: column; gap: 10px; }
+            .hero-actions { flex-direction: column; align-items: stretch; }
+            .btn { justify-content: center; }
+            .preview-body .fake-input { flex-direction: column; }
+            .features-grid { grid-template-columns: 1fr; }
+            .platforms-grid { grid-template-columns: repeat(2, 1fr); }
+            .cta-card { padding: 40px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Ambient Background -->
+<div class="ambient">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+</div>
+
+<!-- Navbar -->
+<nav>
+    <div class="container">
+        <div class="logo">⬇ Media<span>Grab</span></div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#platforms">Platforms</a>
+            <a href="#download" class="nav-cta">Download Free</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="badge"><span class="dot"></span> Free & Open Source</div>
+    <h1>Download videos from <span class="highlight">any platform</span></h1>
+    <p>A free desktop app that downloads videos, reels, stories & more from YouTube, Instagram, TikTok, Twitter/X and 10+ platforms. No browser needed.</p>
+    <div class="hero-actions">
+        <a href="MediaGrab.exe" download class="btn btn-primary" id="hero-download-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for Windows
+        </a>
+        <a href="https://github.com" target="_blank" class="btn btn-secondary" id="hero-github-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            View Source
+        </a>
+    </div>
+    <div class="hero-meta">
+        <span>🖥️ Windows 10/11</span>
+        <span>📦 ~27 MB</span>
+        <span>⚡ No install needed</span>
+        <span>🔒 100% Free</span>
+    </div>
+</section>
+
+<!-- App Preview -->
+<section class="preview-section">
+    <div class="preview-wrapper">
+        <div class="preview-inner">
+            <div class="preview-titlebar">
+                <div class="dot dot-r"></div>
+                <div class="dot dot-y"></div>
+                <div class="dot dot-g"></div>
+                <span class="title">MediaGrab — Universal Video Downloader</span>
+            </div>
+            <div class="preview-body">
+                <div class="fake-input">
+                    <div class="fake-url">https://www.youtube.com/watch?v=dQw4w9WgXcQ</div>
+                    <div class="fake-btn">⬇ Download</div>
+                </div>
+                <div class="fake-platforms">
+                    <div class="fake-badge">▶ YouTube</div>
+                    <div class="fake-badge">📷 Instagram</div>
+                    <div class="fake-badge">🎵 TikTok</div>
+                    <div class="fake-badge">🐦 Twitter/X</div>
+                    <div class="fake-badge">📘 Facebook</div>
+                    <div class="fake-badge">🤖 Reddit</div>
+                    <div class="fake-badge">🎮 Twitch</div>
+                    <div class="fake-badge">📌 Pinterest</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+    <div class="container">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Everything you need, nothing you don't</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon amber">🔗</div>
+                <h3>Auto Platform Detection</h3>
+                <p>Just paste a URL — MediaGrab automatically detects YouTube, Instagram, TikTok, and 10+ other platforms.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon red">📦</div>
+                <h3>Bulk Downloads</h3>
+                <p>Paste multiple URLs at once and download them all sequentially. Perfect for playlists and batch saving.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green">⚡</div>
+                <h3>High Quality</h3>
+                <p>Downloads the best available quality — up to 1080p for YouTube with automatic audio+video merging.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon purple">🖥️</div>
+                <h3>No Browser Needed</h3>
+                <p>A standalone desktop app. No browser extensions, no online tools, no ads. Just double-click and go.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon blue">📂</div>
+                <h3>Built-in File Manager</h3>
+                <p>View, open, and manage all your downloaded files directly from the app. One-click to open in Explorer.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon pink">🔒</div>
+                <h3>100% Free & Private</h3>
+                <p>No accounts, no tracking, no ads. Your downloads stay on your computer. Open source and transparent.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Supported Platforms -->
+<section class="platforms" id="platforms">
+    <div class="container">
+        <div class="section-label">Compatibility</div>
+        <h2 class="section-title">10+ platforms supported</h2>
+        <div class="platforms-grid">
+            <div class="platform-chip"><span class="p-icon">▶</span><span class="p-name">YouTube</span></div>
+            <div class="platform-chip"><span class="p-icon">📷</span><span class="p-name">Instagram</span></div>
+            <div class="platform-chip"><span class="p-icon">🎵</span><span class="p-name">TikTok</span></div>
+            <div class="platform-chip"><span class="p-icon">🐦</span><span class="p-name">Twitter / X</span></div>
+            <div class="platform-chip"><span class="p-icon">📘</span><span class="p-name">Facebook</span></div>
+            <div class="platform-chip"><span class="p-icon">🤖</span><span class="p-name">Reddit</span></div>
+            <div class="platform-chip"><span class="p-icon">🎮</span><span class="p-name">Twitch</span></div>
+            <div class="platform-chip"><span class="p-icon">📌</span><span class="p-name">Pinterest</span></div>
+            <div class="platform-chip"><span class="p-icon">💼</span><span class="p-name">LinkedIn</span></div>
+            <div class="platform-chip"><span class="p-icon">👻</span><span class="p-name">Snapchat</span></div>
+            <div class="platform-chip"><span class="p-icon">📺</span><span class="p-name">Vimeo</span></div>
+            <div class="platform-chip"><span class="p-icon">🌐</span><span class="p-name">& More</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA / Download -->
+<section class="cta-section" id="download">
+    <div class="container">
+        <div class="cta-card">
+            <h2>Ready to grab your videos?</h2>
+            <p>Download MediaGrab for free. No installation — just run the .exe and start downloading.</p>
+            <a href="MediaGrab.exe" download class="btn btn-primary" id="cta-download-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download MediaGrab.exe
+            </a>
+            <p class="cta-info">Windows 10/11 · 27 MB · No install required · v1.0</p>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="logo">⬇ Media<span>Grab</span></div>
+        <p>Free & open-source video downloader. Made with ❤️</p>
+    </div>
+</footer>
+
+<!-- Smooth scroll-reveal animations -->
+<script>
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.feature-card, .platform-chip, .cta-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(el);
+    });
+
+    // Stagger feature cards
+    document.querySelectorAll('.feature-card').forEach((card, i) => {
+        card.style.transitionDelay = `${i * 0.08}s`;
+    });
+    document.querySelectorAll('.platform-chip').forEach((chip, i) => {
+        chip.style.transitionDelay = `${i * 0.05}s`;
+    });
+</script>
+
+</body>
+</html>
