@@ -1,0 +1,51 @@
+name: Build Desktop Apps
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install yt-dlp instaloader requests Pillow customtkinter pyinstaller
+        
+    - name: Build with PyInstaller
+      run: python build_action.py
+      
+    - name: Package macOS App (DMG)
+      if: runner.os == 'macOS'
+      run: |
+        npm install -g create-dmg
+        create-dmg dist/MediaGrab.app || echo "create-dmg failed, taking fallback"
+        mv MediaGrab*.dmg dist/MediaGrab.dmg || echo "No DMG found"
+        
+    - name: Upload Windows Artifact
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: MediaGrab-Windows
+        path: dist/MediaGrab.exe
+        
+    - name: Upload macOS Artifact
+      if: runner.os == 'macOS'
+      uses: actions/upload-artifact@v4
+      with:
+        name: MediaGrab-macOS
+        path: dist/MediaGrab.dmg
