@@ -1,0 +1,3 @@
+[build]
+  # The directory that contains the website files
+  publish = "website"
