@@ -88,6 +88,7 @@
         .hero-actions {
             display: flex; gap: 14px; margin-top: 40px; flex-wrap: wrap; justify-content: center;
             animation: fadeUp .7s ease-out .3s both;
+            position: relative; z-index: 50;
         }
         .btn {
             display: inline-flex; align-items: center; gap: 10px; padding: 15px 32px;
@@ -414,7 +415,7 @@
         <div class="cta-card">
             <h2>Ready to grab your videos?</h2>
             <p>Download MediaGrab for free and start grabbing videos locally.</p>
-            <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; position: relative; z-index: 50;">
                 <div class="dropdown">
                     <button class="btn btn-primary" onclick="toggleDropdown(this)" id="cta-download-btn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
