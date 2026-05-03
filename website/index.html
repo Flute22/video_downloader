@@ -156,25 +156,43 @@
         .preview-titlebar .dot-y { background: #f59e0b; }
         .preview-titlebar .dot-g { background: #22c55e; }
         .preview-titlebar .title { margin-left: 12px; font-size: .8rem; color: #525252; }
-        .preview-body { padding: 32px 28px; }
-        .preview-body .fake-input {
-            display: flex; gap: 10px; align-items: center;
+        .preview-tabs { display:flex; border-bottom:1px solid rgba(255,255,255,.06); }
+        .preview-tab { flex:1; background:none; border:none; color:#525252; font-family:inherit; font-size:.8rem; font-weight:600; padding:12px 16px; cursor:pointer; position:relative; transition:color .2s; }
+        .preview-tab:hover { color:#a3a3a3; }
+        .preview-tab.active { color:#f5f5f5; }
+        .preview-tab.active::after { content:''; position:absolute; bottom:-1px; left:16px; right:16px; height:2px; background:#f59e0b; border-radius:2px 2px 0 0; }
+        .preview-panel { display:none; padding:28px; }
+        .preview-panel.active { display:block; animation:fadeUp .3s ease-out; }
+        .preview-panel .fake-input { display:flex; gap:10px; align-items:center; }
+        .preview-panel .fake-url {
+            flex:1; background:#242424; border:1px solid #2e2e2e; border-radius:10px;
+            padding:14px 18px; font-size:.9rem; color:#f5f5f5; font-family:'Inter',sans-serif; outline:none; cursor:text;
         }
-        .preview-body .fake-url {
-            flex: 1; background: #242424; border: 1px solid #2e2e2e; border-radius: 10px;
-            padding: 14px 18px; font-size: .9rem; color: #525252; font-family: 'Inter', sans-serif;
+        .preview-panel .fake-url:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+        .preview-panel .fake-btn {
+            background:#f59e0b; color:#000; padding:14px 24px; border-radius:10px;
+            font-weight:700; font-size:.9rem; white-space:nowrap; border:none; cursor:pointer; font-family:inherit; transition:background .2s;
         }
-        .preview-body .fake-btn {
-            background: #f59e0b; color: #000; padding: 14px 24px; border-radius: 10px;
-            font-weight: 700; font-size: .9rem; white-space: nowrap;
-        }
-        .preview-body .fake-platforms {
-            display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px;
-        }
-        .preview-body .fake-badge {
-            padding: 8px 14px; background: #1a1a1a; border-radius: 8px;
-            font-size: .78rem; color: #a3a3a3;
-        }
+        .preview-panel .fake-btn:hover { background:#d97706; }
+        .preview-panel .fake-btn:disabled { opacity:.6; cursor:not-allowed; }
+        .preview-panel textarea.fake-url { min-height:100px; resize:vertical; line-height:1.6; }
+        .preview-panel .fake-platforms { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+        .preview-panel .fake-badge { padding:8px 14px; background:#1a1a1a; border-radius:8px; font-size:.78rem; color:#a3a3a3; }
+        .dl-list-item { display:flex; align-items:center; gap:12px; padding:10px 14px; background:#1a1a1a; border:1px solid rgba(255,255,255,.06); border-radius:10px; margin-bottom:8px; }
+        .dl-list-item:hover { border-color:rgba(255,255,255,.12); }
+        .dl-list-icon { width:32px; height:32px; border-radius:8px; display:grid; place-items:center; font-size:.85rem; flex-shrink:0; }
+        .dl-list-icon.folder { background:rgba(245,158,11,.1); }
+        .dl-list-icon.file { background:rgba(34,197,94,.1); }
+        .dl-list-name { flex:1; min-width:0; font-size:.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .dl-list-meta { font-size:.7rem; color:#525252; }
+        .dl-list-btn { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); color:#a3a3a3; padding:6px 14px; border-radius:8px; font-size:.72rem; font-weight:600; cursor:pointer; font-family:inherit; transition:all .2s; }
+        .dl-list-btn:hover { background:rgba(255,255,255,.1); color:#f5f5f5; }
+        .dl-empty { text-align:center; padding:40px 20px; color:#525252; font-size:.85rem; }
+        .dl-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+        .dl-header h3 { font-size:.85rem; font-weight:600; }
+        .dl-header-btns { display:flex; gap:8px; }
+        .dl-danger-btn { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.15); color:#ef4444; padding:6px 14px; border-radius:8px; font-size:.72rem; font-weight:600; cursor:pointer; font-family:inherit; }
+        .dl-danger-btn:hover { background:rgba(239,68,68,.18); }
 
         /* ── Features ─────────────────────────────────────── */
         .features { padding: 80px 24px 100px; }
@@ -248,22 +266,117 @@
         }
         footer .logo { margin-bottom: 8px; display: inline-block; }
 
-        /* ── Responsive ───────────────────────────────────── */
+        /* ── Selection & Scrollbar ─────────────────────────── */
+        ::selection { background: rgba(245,158,11,.3); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
+
+        /* ── Focus & Active States (Accessibility) ────────── */
+        button:focus-visible, input:focus-visible, textarea:focus-visible {
+            outline: 2px solid #f59e0b; outline-offset: 2px;
+        }
+        button:active:not(:disabled) { transform: scale(0.97) !important; }
+
+        /* ── Toast Notifications ──────────────────────────── */
+        .toast-bar {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            z-index: 9999; padding: 12px 24px; border-radius: 12px;
+            font-size: .85rem; font-weight: 600; font-family: inherit;
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.08);
+            animation: toastSlide .4s ease-out;
+            pointer-events: auto; cursor: pointer;
+        }
+        .toast-bar.success { background: rgba(34,197,94,.15); color: #86efac; border-color: rgba(34,197,94,.2); }
+        .toast-bar.error { background: rgba(239,68,68,.15); color: #fca5a5; border-color: rgba(239,68,68,.2); }
+        .toast-bar.info { background: rgba(245,158,11,.15); color: #fde68a; border-color: rgba(245,158,11,.2); }
+        .toast-bar.out { animation: toastSlideOut .3s ease-in forwards; }
+        @keyframes toastSlide { from { opacity:0; transform:translateX(-50%) translateY(20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+        @keyframes toastSlideOut { to { opacity:0; transform:translateX(-50%) translateY(20px); } }
+
+        /* ── Responsive: Tablet (≤ 900px) ─────────────────── */
+        @media (max-width: 900px) {
+            .nav-links { gap: 20px; }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .platforms-grid { grid-template-columns: repeat(3, 1fr); }
+            .cta-card { padding: 48px 32px; }
+            .hero h1 { font-size: clamp(2.2rem, 5vw, 3.5rem); }
+            .hero p { font-size: 1.05rem; }
+        }
+
+        /* ── Responsive: Mobile (≤ 640px) ─────────────────── */
         @media (max-width: 640px) {
             .nav-links a:not(.nav-cta) { display: none; }
+            .nav-links { gap: 12px; }
+            .hero { padding: 100px 16px 50px; min-height: auto; }
+            .hero h1 { font-size: 2rem; letter-spacing: -1px; }
+            .hero p { font-size: .95rem; margin-top: 16px; }
             .hero-meta { flex-direction: column; gap: 10px; text-align: center; align-items: center; }
-            .hero-actions { flex-direction: column; align-items: stretch; width: 100%; max-width: 400px; margin: 40px auto 0; }
-            .btn { justify-content: center; width: 100%; box-sizing: border-box; }
+            .hero-actions { flex-direction: column; align-items: stretch; width: 100%; max-width: 400px; margin: 32px auto 0; }
+            .btn { justify-content: center; width: 100%; box-sizing: border-box; padding: 14px 24px; }
             .dropdown { width: 100%; display: block; }
             .dropdown-content { width: 100%; min-width: auto; }
-            .preview-body .fake-input { flex-direction: column; }
-            .preview-body .fake-btn { width: 100%; box-sizing: border-box; text-align: center; }
-            .features-grid { grid-template-columns: 1fr; }
-            .platforms-grid { grid-template-columns: repeat(2, 1fr); }
-            .cta-card { padding: 30px 20px; }
-            .hero h1 { font-size: 2.2rem; }
-            .hero { padding-top: 100px; }
             .container { padding: 0 16px; }
+
+            /* Preview / Downloader */
+            .preview-section { padding: 0 12px 60px; }
+            .preview-wrapper { border-radius: 16px; padding: 4px; }
+            .preview-inner { border-radius: 12px; }
+            .preview-titlebar { padding: 10px 14px; }
+            .preview-titlebar .dot { width: 10px; height: 10px; }
+            .preview-titlebar .title { font-size: .7rem; margin-left: 8px; }
+            .preview-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .preview-tab { font-size: .72rem; padding: 10px 12px; white-space: nowrap; }
+            .preview-panel { padding: 18px 14px; }
+            .preview-panel .fake-input { flex-direction: column; }
+            .preview-panel .fake-url { font-size: .85rem; padding: 12px 14px; width: 100%; }
+            .preview-panel .fake-btn { width: 100%; text-align: center; padding: 14px 20px; font-size: .85rem; }
+            .preview-panel .fake-platforms { gap: 6px; margin-top: 14px; }
+            .preview-panel .fake-badge { padding: 6px 10px; font-size: .7rem; }
+            .dl-header { flex-direction: column; gap: 10px; align-items: stretch; }
+            .dl-header-btns { justify-content: flex-end; }
+            .dl-list-item { padding: 10px 12px; gap: 10px; }
+            .dl-list-name { font-size: .75rem; }
+
+            /* Features */
+            .features { padding: 50px 16px 60px; }
+            .features-grid { grid-template-columns: 1fr; gap: 14px; }
+            .feature-card { padding: 24px 20px; }
+            .section-title { margin-bottom: 36px; }
+
+            /* Platforms */
+            .platforms { padding: 20px 16px 60px; }
+            .platforms-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .platform-chip { padding: 12px 14px; }
+            .platform-chip .p-name { font-size: .82rem; }
+
+            /* CTA */
+            .cta-section { padding: 40px 16px 80px; }
+            .cta-card { padding: 32px 20px; border-radius: 18px; }
+            .cta-card h2 { font-size: 1.5rem; }
+            .cta-card .btn-primary { font-size: 1rem; padding: 16px 32px; }
+
+            /* Footer */
+            footer { padding: 28px 16px; }
+
+            /* Toast */
+            .toast-bar { left: 16px; right: 16px; transform: none; text-align: center; }
+            @keyframes toastSlide { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+            @keyframes toastSlideOut { to { opacity:0; transform:translateY(20px); } }
+        }
+
+        /* ── Responsive: Very small (≤ 380px) ─────────────── */
+        @media (max-width: 380px) {
+            .hero h1 { font-size: 1.7rem; }
+            .hero p { font-size: .88rem; }
+            .badge { font-size: .72rem; padding: 5px 12px; }
+            .preview-tab { font-size: .65rem; padding: 9px 8px; }
+            .preview-panel { padding: 14px 10px; }
+            .platforms-grid { grid-template-columns: 1fr 1fr; }
+            .platform-chip .p-icon { font-size: 1rem; }
+            .platform-chip .p-name { font-size: .75rem; }
         }
     </style>
 </head>
@@ -281,6 +394,7 @@
     <div class="container">
         <div class="logo">⬇ Media<span>Grab</span></div>
         <div class="nav-links">
+            <a href="#try-online">Try Online</a>
             <a href="#features">Features</a>
             <a href="#platforms">Platforms</a>
             <a href="#download" class="nav-cta">Download Free</a>
@@ -316,8 +430,8 @@
     </div>
 </section>
 
-<!-- App Preview -->
-<section class="preview-section">
+<!-- Working Downloader -->
+<section class="preview-section" id="try-online">
     <div class="preview-wrapper">
         <div class="preview-inner">
             <div class="preview-titlebar">
@@ -326,11 +440,19 @@
                 <div class="dot dot-g"></div>
                 <span class="title">MediaGrab — Universal Video Downloader</span>
             </div>
-            <div class="preview-body">
+            <div class="preview-tabs">
+                <button class="preview-tab active" data-panel="single">⬇ Single Download</button>
+                <button class="preview-tab" data-panel="bulk">📦 Bulk Download</button>
+                <button class="preview-tab" data-panel="downloads">📂 My Downloads</button>
+            </div>
+            <!-- Single Download -->
+            <div id="panel-single" class="preview-panel active">
                 <div class="fake-input">
-                    <div class="fake-url">https://www.youtube.com/watch?v=dQw4w9WgXcQ</div>
-                    <div class="fake-btn">⬇ Download</div>
+                    <input id="dl-url" class="fake-url" type="url" placeholder="Paste video URL here… (YouTube, Instagram, TikTok, etc.)" spellcheck="false" autocomplete="off" />
+                    <button id="dl-btn" class="fake-btn" onclick="doDownload()">⬇ Download</button>
                 </div>
+                <div id="dl-detected" style="margin-top:12px;padding:5px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:100px;font-size:.78rem;color:#f59e0b;font-weight:600;display:none;width:fit-content;"></div>
+                <div id="dl-status" style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:500;line-height:1.6;display:none;border-left:3px solid;"></div>
                 <div class="fake-platforms">
                     <div class="fake-badge">▶ YouTube</div>
                     <div class="fake-badge">📷 Instagram</div>
@@ -341,6 +463,26 @@
                     <div class="fake-badge">🎮 Twitch</div>
                     <div class="fake-badge">📌 Pinterest</div>
                 </div>
+            </div>
+            <!-- Bulk Download -->
+            <div id="panel-bulk" class="preview-panel">
+                <label style="font-size:.82rem;font-weight:500;color:#a3a3a3;margin-bottom:8px;display:block;">Paste multiple URLs (one per line)</label>
+                <textarea id="bulk-urls" class="fake-url" style="width:100%;min-height:110px;resize:vertical;line-height:1.6;" placeholder="https://youtube.com/watch?v=...&#10;https://instagram.com/reel/...&#10;https://tiktok.com/@user/video/..." spellcheck="false"></textarea>
+                <div style="margin-top:12px;">
+                    <button id="bulk-btn" class="fake-btn" onclick="doBulkDownload()" style="width:100%;text-align:center;">📦 Download All</button>
+                </div>
+                <div id="bulk-status" style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:500;line-height:1.6;display:none;border-left:3px solid;"></div>
+            </div>
+            <!-- My Downloads -->
+            <div id="panel-downloads" class="preview-panel">
+                <div class="dl-header">
+                    <h3>Downloaded Files</h3>
+                    <div class="dl-header-btns">
+                        <button class="dl-list-btn" onclick="refreshDownloads()">🔄 Refresh</button>
+                        <button class="dl-danger-btn" onclick="clearDownloads()">🗑 Clear All</button>
+                    </div>
+                </div>
+                <div id="downloads-list"><div class="dl-empty">📂 No downloads yet. Paste a URL to get started.</div></div>
             </div>
         </div>
     </div>
@@ -480,6 +622,142 @@
                 }
             }
         }
+    }
+
+    /* ---- Preview Tabs ---- */
+    document.querySelectorAll('.preview-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.preview-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+            if (tab.dataset.panel === 'downloads') refreshDownloads();
+        });
+    });
+
+    /* ---- Platform Detection ---- */
+    const platformMap = {
+        'youtube.com':'YouTube','youtu.be':'YouTube','instagram.com':'Instagram',
+        'tiktok.com':'TikTok','twitter.com':'X / Twitter','x.com':'X / Twitter',
+        'facebook.com':'Facebook','fb.watch':'Facebook','reddit.com':'Reddit',
+        'twitch.tv':'Twitch','pinterest.com':'Pinterest','linkedin.com':'LinkedIn'
+    };
+    const dlInput = document.getElementById('dl-url');
+    const dlDetected = document.getElementById('dl-detected');
+    dlInput.addEventListener('input', function() {
+        const url = this.value.toLowerCase();
+        const match = Object.keys(platformMap).find(k => url.includes(k));
+        if (match && url.trim()) {
+            dlDetected.textContent = '✓ Detected: ' + platformMap[match];
+            dlDetected.style.display = 'inline-block';
+        } else { dlDetected.style.display = 'none'; }
+    });
+    dlInput.addEventListener('keydown', e => { if (e.key === 'Enter') doDownload(); });
+
+    /* ---- Toast notification ---- */
+    function toast(msg, type = 'info', ms = 3500) {
+        const el = document.createElement('div');
+        el.className = 'toast-bar ' + type;
+        el.textContent = msg;
+        el.onclick = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
+        document.body.appendChild(el);
+        setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, ms);
+    }
+
+    /* ---- Status helper ---- */
+    function showStatus(el, msg, type) {
+        el.style.display = 'block';
+        el.innerHTML = msg;
+        const colors = { success:['rgba(34,197,94,.08)','#22c55e','#86efac'], error:['rgba(239,68,68,.08)','#ef4444','#fca5a5'], loading:['rgba(245,158,11,.08)','#f59e0b','#fde68a'] };
+        const c = colors[type] || colors.loading;
+        el.style.background = c[0]; el.style.borderColor = c[1]; el.style.color = c[2];
+    }
+
+    /* ---- Single Download ---- */
+    async function doDownload() {
+        const url = dlInput.value.trim();
+        const status = document.getElementById('dl-status');
+        const btn = document.getElementById('dl-btn');
+        if (!url) { showStatus(status, 'Please paste a video URL first.', 'error'); toast('Please enter a URL','error'); return; }
+        btn.disabled = true; btn.textContent = '⏳ Downloading...';
+        showStatus(status, '⏳ Downloading... This may take a moment.', 'loading');
+        try {
+            const res = await fetch('/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
+            const data = await res.json();
+            if (data.status === 'success') {
+                let msg = '✅ ' + data.message;
+                if (data.title) msg += '<br>📹 ' + data.title;
+                if (data.uploader) msg += '<br>👤 ' + data.uploader;
+                showStatus(status, msg, 'success');
+                toast('Download complete! ✅','success');
+                dlInput.value = ''; dlDetected.style.display = 'none';
+            } else {
+                showStatus(status, '❌ ' + data.message, 'error');
+                toast('Download failed','error');
+            }
+        } catch(e) {
+            showStatus(status, '❌ Could not connect to server. Make sure the Flask app is running.', 'error');
+            toast('Connection error','error');
+        }
+        finally { btn.disabled = false; btn.textContent = '⬇ Download'; }
+    }
+
+    /* ---- Bulk Download ---- */
+    async function doBulkDownload() {
+        const textarea = document.getElementById('bulk-urls');
+        const urls = textarea.value.trim().split('\n').filter(u => u.trim());
+        const status = document.getElementById('bulk-status');
+        const btn = document.getElementById('bulk-btn');
+        if (!urls.length) { showStatus(status, 'Please enter at least one URL.', 'error'); toast('Enter URLs first','error'); return; }
+        btn.disabled = true; btn.textContent = '⏳ Processing ' + urls.length + ' URLs...';
+        showStatus(status, '⏳ Downloading ' + urls.length + ' URLs... Please wait.', 'loading');
+        try {
+            const res = await fetch('/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls}) });
+            const data = await res.json();
+            if (data.status === 'success') {
+                let msg = '✅ ' + data.message + '<br><br>';
+                data.results.forEach((r,i) => { msg += (r.status==='success'?'✅':'❌') + ' URL '+(i+1)+': '+r.message+'<br>'; });
+                showStatus(status, msg, 'success');
+                toast(data.results.length + ' URLs processed! ✅','success');
+                textarea.value = '';
+            } else { showStatus(status, '❌ ' + data.message, 'error'); toast('Bulk download failed','error'); }
+        } catch(e) { showStatus(status, '❌ Could not connect to server.', 'error'); toast('Connection error','error'); }
+        finally { btn.disabled = false; btn.textContent = '📦 Download All'; }
+    }
+
+    /* ---- Downloads List ---- */
+    async function refreshDownloads() {
+        const list = document.getElementById('downloads-list');
+        list.innerHTML = '<div class="dl-empty" style="color:#fde68a;">🔄 Loading...</div>';
+        try {
+            const res = await fetch('/downloads');
+            const data = await res.json();
+            if (data.items && data.items.length > 0) {
+                let html = '';
+                data.items.forEach(item => {
+                    const isFile = item.type === 'file';
+                    const meta = isFile ? formatSize(item.size) : item.file_count + ' file' + (item.file_count!==1?'s':'');
+                    const action = isFile ? "window.open('/download-file/"+encodeURIComponent(item.name)+"')" : "window.open('/download-folder/"+encodeURIComponent(item.name)+"')";
+                    const btnLabel = isFile ? '⬇ Download' : '📦 ZIP';
+                    html += '<div class="dl-list-item"><div class="dl-list-icon '+(isFile?'file':'folder')+'">'+(isFile?'📄':'📁')+'</div><div style="flex:1;min-width:0;"><div class="dl-list-name" title="'+item.name+'">'+item.name+'</div><div class="dl-list-meta">'+meta+'</div></div><button class="dl-list-btn" onclick="'+action+'">'+btnLabel+'</button></div>';
+                });
+                list.innerHTML = html;
+            } else { list.innerHTML = '<div class="dl-empty">📂 No downloads yet. Paste a URL to get started.</div>'; }
+        } catch(e) { list.innerHTML = '<div class="dl-empty" style="color:#fca5a5;">❌ Could not load downloads.</div>'; }
+    }
+    async function clearDownloads() {
+        if (!confirm('Delete all downloaded files?')) return;
+        try {
+            const res = await fetch('/clear-downloads', { method:'POST', headers:{'Content-Type':'application/json'} });
+            const data = await res.json();
+            if (data.status === 'success') { refreshDownloads(); toast('Downloads cleared','success'); }
+        } catch(e) { toast('Error clearing downloads','error'); }
+    }
+    function formatSize(bytes) {
+        if (!bytes) return '0 B';
+        const k = 1024, s = ['B','KB','MB','GB'];
+        const i = Math.floor(Math.log(bytes)/Math.log(k));
+        return parseFloat((bytes/Math.pow(k,i)).toFixed(1)) + ' ' + s[i];
     }
 </script>
 

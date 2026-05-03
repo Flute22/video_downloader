@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify, send_file, send_from_directory
 import os
 import tempfile
 import threading
@@ -331,7 +331,12 @@ downloader = UniversalDownloader()
 
 @app.route('/')
 def index():
-    """Main page"""
+    """Main page - serves the website landing page with working downloader"""
+    return send_from_directory('website', 'index.html')
+
+@app.route('/app')
+def app_ui():
+    """Full app UI page"""
     return render_template('index.html')
 
 @app.route('/download', methods=['POST'])
@@ -500,6 +505,8 @@ if __name__ == '__main__':
     print("Starting server...")
     print("Supported platforms: YouTube, Instagram, TikTok, Twitter/X, Facebook, Reddit, and more!")
     print("Features: Stories, Reels, Posts, Videos, Bulk downloads")
-    print("Server running on: http://localhost:5000")
+    print("")
+    print("  Website (with downloader): http://localhost:5000")
+    print("  Full App UI:               http://localhost:5000/app")
     print("=" * 60)
     app.run(debug=True, host='0.0.0.0', port=5000)
