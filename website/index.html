@@ -320,25 +320,27 @@
             .dropdown-content { width: 100%; min-width: auto; }
             .container { padding: 0 16px; }
 
-            /* Preview / Downloader */
-            .preview-section { padding: 0 12px 60px; }
-            .preview-wrapper { border-radius: 16px; padding: 4px; }
+            /* Preview / Downloader — clean mobile */
+            .preview-section { padding: 0 10px 48px; }
+            .preview-wrapper { border-radius: 14px; padding: 3px; background: linear-gradient(145deg, rgba(245,158,11,.06), rgba(239,68,68,.03)); }
             .preview-inner { border-radius: 12px; }
-            .preview-titlebar { padding: 10px 14px; }
-            .preview-titlebar .dot { width: 10px; height: 10px; }
-            .preview-titlebar .title { font-size: .7rem; margin-left: 8px; }
-            .preview-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            .preview-tab { font-size: .72rem; padding: 10px 12px; white-space: nowrap; }
-            .preview-panel { padding: 18px 14px; }
-            .preview-panel .fake-input { flex-direction: column; }
-            .preview-panel .fake-url { font-size: .85rem; padding: 12px 14px; width: 100%; }
-            .preview-panel .fake-btn { width: 100%; text-align: center; padding: 14px 20px; font-size: .85rem; }
-            .preview-panel .fake-platforms { gap: 6px; margin-top: 14px; }
-            .preview-panel .fake-badge { padding: 6px 10px; font-size: .7rem; }
-            .dl-header { flex-direction: column; gap: 10px; align-items: stretch; }
-            .dl-header-btns { justify-content: flex-end; }
+            .preview-titlebar { display: none; }
+            .preview-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+            .preview-tab { font-size: .75rem; padding: 12px 8px; white-space: nowrap; letter-spacing: -.01em; }
+            .preview-tab.active::after { left: 8px; right: 8px; }
+            .preview-panel { padding: 20px 16px; }
+            .preview-panel .fake-input { flex-direction: column; gap: 10px; }
+            .preview-panel .fake-url { font-size: .88rem; padding: 14px 16px; width: 100%; border-radius: 10px; }
+            .preview-panel .fake-btn { width: 100%; text-align: center; padding: 14px 20px; font-size: .88rem; border-radius: 10px; }
+            .preview-panel .fake-platforms { display: none; }
+            .dl-header { flex-direction: row; gap: 8px; align-items: center; }
+            .dl-header h3 { font-size: .82rem; }
+            .dl-header-btns { display: flex; gap: 6px; }
+            .dl-list-btn, .dl-danger-btn { padding: 5px 10px; font-size: .68rem; }
             .dl-list-item { padding: 10px 12px; gap: 10px; }
             .dl-list-name { font-size: .75rem; }
+            .dl-list-icon { width: 28px; height: 28px; font-size: .75rem; }
+            .dl-list-meta { font-size: .65rem; }
 
             /* Features */
             .features { padding: 50px 16px 60px; }
