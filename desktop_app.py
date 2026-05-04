@@ -1,5 +1,5 @@
 """
-MediaGrab Desktop — Universal Social Media Downloader
+AnyVideo Desktop — Universal Social Media Downloader
 A standalone desktop app built with CustomTkinter.
 """
 
@@ -236,7 +236,7 @@ FONT_FAMILY = 'Segoe UI'
 # Application
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class MediaGrabApp(ctk.CTk):
+class AnyVideoApp(ctk.CTk):
     """Main application window."""
 
     WIDTH  = 900
@@ -246,7 +246,7 @@ class MediaGrabApp(ctk.CTk):
         super().__init__()
 
         # ── window chrome ─────────────────────────────────────────────────
-        self.title('MediaGrab — Universal Video Downloader')
+        self.title('AnyVideo — Universal Video Downloader')
         self.geometry(f'{self.WIDTH}x{self.HEIGHT}')
         self.minsize(780, 560)
         self.configure(fg_color=COLORS['bg_dark'])
@@ -273,7 +273,7 @@ class MediaGrabApp(ctk.CTk):
 
         # app icon / title
         title = ctk.CTkLabel(
-            header, text='⬇  MediaGrab',
+            header, text='⬇  AnyVideo',
             font=ctk.CTkFont(family=FONT_FAMILY, size=24, weight='bold'),
             text_color=COLORS['accent'],
         )
@@ -788,5 +788,5 @@ class MediaGrabApp(ctk.CTk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
-    app = MediaGrabApp()
+    app = AnyVideoApp()
     app.mainloop()

@@ -12,6 +12,6 @@ PyInstaller.__main__.run([
     'desktop_app.py',
     '--onefile',
     '--windowed',
-    '--name=MediaGrab',
+    '--name=AnyVideo',
     f'--add-data={custom_tkinter_path}{separator}customtkinter'
 ])
