@@ -1,4 +1,5 @@
 from flask import Flask, request, render_template, jsonify, send_file, send_from_directory
+from flask_cors import CORS
 import os
 import tempfile
 import threading
@@ -13,6 +14,7 @@ import zipfile
 import shutil
 
 app = Flask(__name__)
+CORS(app)
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-this'
 
 # Create downloads directory if it doesn't exist

@@ -685,6 +685,7 @@
         showStatus(status, '⏳ Downloading... This may take a moment.', 'loading');
         try {
             const res = await fetch('/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
+            if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
             const data = await res.json();
             if (data.status === 'success') {
                 let msg = '✅ ' + data.message;
@@ -698,7 +699,16 @@
                 toast('Download failed','error');
             }
         } catch(e) {
-            showStatus(status, '❌ Could not connect to server. Make sure the Flask app is running.', 'error');
+            console.error(e);
+            let errMsg = '❌ Could not connect to server. Make sure the Flask app is running.';
+            if (window.location.protocol === 'file:') {
+                errMsg = '❌ You cannot run this app from a local file. Please run app.py and visit http://localhost:5000';
+            } else if (e.message.includes('HTTP Error 404') || e.message.includes('HTTP Error 405')) {
+                errMsg = '❌ API endpoint not found. If hosted on Netlify, the Flask backend must be deployed separately.';
+            } else if (e.message !== 'Failed to fetch') {
+                errMsg = '❌ ' + e.message;
+            }
+            showStatus(status, errMsg, 'error');
             toast('Connection error','error');
         }
         finally { btn.disabled = false; btn.textContent = '⬇ Download'; }
@@ -715,6 +725,7 @@
         showStatus(status, '⏳ Downloading ' + urls.length + ' URLs... Please wait.', 'loading');
         try {
             const res = await fetch('/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls}) });
+            if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
             const data = await res.json();
             if (data.status === 'success') {
                 let msg = '✅ ' + data.message + '<br><br>';
@@ -723,7 +734,15 @@
                 toast(data.results.length + ' URLs processed! ✅','success');
                 textarea.value = '';
             } else { showStatus(status, '❌ ' + data.message, 'error'); toast('Bulk download failed','error'); }
-        } catch(e) { showStatus(status, '❌ Could not connect to server.', 'error'); toast('Connection error','error'); }
+        } catch(e) {
+            console.error(e);
+            let errMsg = '❌ Could not connect to server.';
+            if (window.location.protocol === 'file:') errMsg = '❌ You cannot run this app from a local file.';
+            else if (e.message.includes('HTTP Error 404') || e.message.includes('HTTP Error 405')) errMsg = '❌ API endpoint not found (Netlify deployment requires separate backend).';
+            else if (e.message !== 'Failed to fetch') errMsg = '❌ ' + e.message;
+            showStatus(status, errMsg, 'error');
+            toast('Connection error','error');
+        }
         finally { btn.disabled = false; btn.textContent = '📦 Download All'; }
     }
 

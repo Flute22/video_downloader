@@ -551,6 +551,39 @@
             .toast-container { left: 1rem; right: 1rem; max-width: none; }
         }
 
+        /* Progress bar */
+        .progress-wrap {
+            display: none;
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+            animation: fadeUp 300ms ease-out;
+        }
+        .progress-wrap.visible { display: block; }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--accent-light);
+            margin-bottom: 0.5rem;
+        }
+        .progress-track {
+            height: 6px;
+            background: var(--bg-elevated);
+            border-radius: 100px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 100px;
+            background: linear-gradient(90deg, var(--accent), #fb923c);
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+            transition: width 400ms ease;
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -585,7 +618,16 @@
         <section class="hero">
             <h1>Download from <span>any platform</span></h1>
             <p>Paste a link from YouTube, Instagram, TikTok, or any social media and download videos instantly.</p>
-            <div class="platforms" style="min-height: 34px;"></div>
+            <div id="hero-platforms" class="platforms" style="min-height: 34px;"></div>
+            <div id="hero-progress" class="progress-wrap">
+                <div class="progress-label">
+                    <span id="progress-label-text">⏳ Downloading...</span>
+                    <span id="progress-pct">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
         </section>
 
         <!-- Main card -->
@@ -737,6 +779,60 @@
             if (e.key === 'Enter') downloadSingle();
         });
 
+        /* ---- Progress bar helpers ---- */
+        let _progressTimer = null;
+
+        function startProgress() {
+            const platforms = document.getElementById('hero-platforms');
+            const progressWrap = document.getElementById('hero-progress');
+            const fill = document.getElementById('progress-fill');
+            const pct = document.getElementById('progress-pct');
+            const label = document.getElementById('progress-label-text');
+
+            platforms.style.display = 'none';
+            progressWrap.classList.add('visible');
+            label.textContent = '⏳ Downloading...';
+
+            let current = 0;
+            fill.style.width = '0%';
+            pct.textContent = '0%';
+
+            _progressTimer = setInterval(() => {
+                // Ease toward 90% then slow down — real completion snaps to 100%
+                const remaining = 90 - current;
+                const step = Math.max(0.5, remaining * 0.04);
+                current = Math.min(90, current + step);
+                fill.style.width = current + '%';
+                pct.textContent = Math.round(current) + '%';
+            }, 250);
+        }
+
+        function finishProgress(success) {
+            clearInterval(_progressTimer);
+            const fill = document.getElementById('progress-fill');
+            const pct = document.getElementById('progress-pct');
+            const label = document.getElementById('progress-label-text');
+
+            fill.style.width = '100%';
+            pct.textContent = '100%';
+            label.textContent = success ? '✅ Download complete!' : '❌ Download failed';
+            if (!success) {
+                fill.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
+                fill.style.boxShadow = '0 0 8px rgba(239,68,68,0.5)';
+            }
+
+            setTimeout(() => {
+                const platforms = document.getElementById('hero-platforms');
+                const progressWrap = document.getElementById('hero-progress');
+                progressWrap.classList.remove('visible');
+                platforms.style.display = '';
+                // reset fill for next time
+                fill.style.width = '0%';
+                fill.style.background = '';
+                fill.style.boxShadow = '';
+            }, 1800);
+        }
+
         /* ---- Single download ---- */
         async function downloadSingle() {
             const input = document.getElementById('single-url');
@@ -752,6 +848,7 @@
             text.textContent = 'Downloading...';
             btn.disabled = true;
             statusDiv.innerHTML = '';
+            startProgress();
 
             try {
                 const res = await fetch('/download', {
@@ -759,21 +856,34 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url })
                 });
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
                 const data = await res.json();
 
                 if (data.status === 'success') {
                     let msg = data.message;
                     if (data.title) msg += '\n' + data.title;
+                    finishProgress(true);
                     showStatus(statusDiv, msg, 'success');
                     toast('Download complete!', 'success');
                     input.value = '';
                     document.getElementById('detected-platform').classList.remove('visible');
                 } else {
+                    finishProgress(false);
                     showStatus(statusDiv, data.message, 'error');
                     toast('Download failed', 'error');
                 }
             } catch (err) {
-                showStatus(statusDiv, 'Network error: ' + err.message, 'error');
+                console.error(err);
+                let errMsg = 'Network error: ' + err.message;
+                if (window.location.protocol === 'file:') {
+                    errMsg = 'You cannot run this app from a local file. Please run app.py and visit http://localhost:5000';
+                } else if (err.message.includes('HTTP Error 404') || err.message.includes('HTTP Error 405')) {
+                    errMsg = 'API endpoint not found. If hosted on Netlify, the Flask backend must be deployed separately.';
+                } else if (err.message === 'Failed to fetch') {
+                    errMsg = 'Could not connect to server. Make sure the Flask app is running.';
+                }
+                finishProgress(false);
+                showStatus(statusDiv, errMsg, 'error');
                 toast('Network error', 'error');
             } finally {
                 spinner.style.display = 'none';
@@ -804,23 +914,32 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ urls })
                 });
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
                 const data = await res.json();
 
                 if (data.status === 'success') {
-                    let msg = data.message + '\n\n';
+                    let msg = '✅ ' + data.message + '\n\n';
                     data.results.forEach((r, i) => {
-                        const icon = r.status === 'success' ? '\u2713' : '\u2717';
-                        msg += `${icon} URL ${i + 1}: ${r.message}\n`;
+                        msg += (r.status === 'success' ? '✅' : '❌') + ` URL ${i+1}: ${r.message}\n`;
                     });
                     showStatus(statusDiv, msg, 'success');
-                    toast(`${data.results.length} URLs processed`, 'success');
+                    toast(`${data.results.length} URLs processed!`, 'success');
                     textarea.value = '';
                 } else {
                     showStatus(statusDiv, data.message, 'error');
                     toast('Bulk download failed', 'error');
                 }
             } catch (err) {
-                showStatus(statusDiv, 'Network error: ' + err.message, 'error');
+                console.error(err);
+                let errMsg = 'Network error: ' + err.message;
+                if (window.location.protocol === 'file:') {
+                    errMsg = 'You cannot run this app from a local file. Please run app.py and visit http://localhost:5000';
+                } else if (err.message.includes('HTTP Error 404') || err.message.includes('HTTP Error 405')) {
+                    errMsg = 'API endpoint not found. If hosted on Netlify, the Flask backend must be deployed separately.';
+                } else if (err.message === 'Failed to fetch') {
+                    errMsg = 'Could not connect to server. Make sure the Flask app is running.';
+                }
+                showStatus(statusDiv, errMsg, 'error');
                 toast('Network error', 'error');
             } finally {
                 spinner.style.display = 'none';
