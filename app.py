@@ -14,11 +14,15 @@ import zipfile
 import shutil
 
 app = Flask(__name__)
-CORS(app)
-app.config['SECRET_KEY'] = 'your-secret-key-here-change-this'
+CORS(app, resources={r"/*": {"origins": "*"}})
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-this')
 
-# Create downloads directory if it doesn't exist
-DOWNLOAD_DIR = os.path.join(os.getcwd(), 'downloads')
+# Use /tmp on Render (no persistent disk on free tier), local dir otherwise
+IS_RENDER = os.environ.get('RENDER', False)
+if IS_RENDER:
+    DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), 'anyvideo_downloads')
+else:
+    DOWNLOAD_DIR = os.path.join(os.getcwd(), 'downloads')
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
@@ -499,6 +503,11 @@ def clear_downloads():
         return jsonify({'status': 'success', 'message': 'Downloads cleared successfully'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error clearing downloads: {str(e)}'})
+
+@app.route('/health')
+def health():
+    """Health check for Render"""
+    return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
     print("=" * 60)

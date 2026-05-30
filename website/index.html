@@ -585,6 +585,11 @@
 
 <!-- Smooth scroll-reveal animations -->
 <script>
+    /* ---- API Base URL: auto-detect local vs deployed ---- */
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? ''  /* local Flask — relative URLs */
+        : 'https://anyvideo-backend.onrender.com';  /* ← Replace with your Render URL */
+
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -684,7 +689,7 @@
         btn.disabled = true; btn.textContent = '⏳ Downloading...';
         showStatus(status, '⏳ Downloading... This may take a moment.', 'loading');
         try {
-            const res = await fetch('/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
+            const res = await fetch(API_BASE + '/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
             if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
             const data = await res.json();
             if (data.status === 'success') {
@@ -724,7 +729,7 @@
         btn.disabled = true; btn.textContent = '⏳ Processing ' + urls.length + ' URLs...';
         showStatus(status, '⏳ Downloading ' + urls.length + ' URLs... Please wait.', 'loading');
         try {
-            const res = await fetch('/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls}) });
+            const res = await fetch(API_BASE + '/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls}) });
             if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
             const data = await res.json();
             if (data.status === 'success') {
@@ -751,14 +756,14 @@
         const list = document.getElementById('downloads-list');
         list.innerHTML = '<div class="dl-empty" style="color:#fde68a;">🔄 Loading...</div>';
         try {
-            const res = await fetch('/downloads');
+            const res = await fetch(API_BASE + '/downloads');
             const data = await res.json();
             if (data.items && data.items.length > 0) {
                 let html = '';
                 data.items.forEach(item => {
                     const isFile = item.type === 'file';
                     const meta = isFile ? formatSize(item.size) : item.file_count + ' file' + (item.file_count!==1?'s':'');
-                    const action = isFile ? "window.open('/download-file/"+encodeURIComponent(item.name)+"')" : "window.open('/download-folder/"+encodeURIComponent(item.name)+"')";
+                    const action = isFile ? "window.open('"+API_BASE+"/download-file/"+encodeURIComponent(item.name)+"')" : "window.open('"+API_BASE+"/download-folder/"+encodeURIComponent(item.name)+"')";
                     const btnLabel = isFile ? '⬇ Download' : '📦 ZIP';
                     html += '<div class="dl-list-item"><div class="dl-list-icon '+(isFile?'file':'folder')+'">'+(isFile?'📄':'📁')+'</div><div style="flex:1;min-width:0;"><div class="dl-list-name" title="'+item.name+'">'+item.name+'</div><div class="dl-list-meta">'+meta+'</div></div><button class="dl-list-btn" onclick="'+action+'">'+btnLabel+'</button></div>';
                 });
@@ -769,7 +774,7 @@
     async function clearDownloads() {
         if (!confirm('Delete all downloaded files?')) return;
         try {
-            const res = await fetch('/clear-downloads', { method:'POST', headers:{'Content-Type':'application/json'} });
+            const res = await fetch(API_BASE + '/clear-downloads', { method:'POST', headers:{'Content-Type':'application/json'} });
             const data = await res.json();
             if (data.status === 'success') { refreshDownloads(); toast('Downloads cleared','success'); }
         } catch(e) { toast('Error clearing downloads','error'); }
