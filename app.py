@@ -153,69 +153,109 @@ class UniversalDownloader:
     
     def download_youtube_content(self, url, path, client_id=None, cookies_path=None):
         """Download YouTube videos, shorts, playlists"""
-        try:
-            ydl_opts = {
-                'outtmpl': os.path.join(path, '%(uploader)s - %(title)s.%(ext)s'),
-                'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/bestvideo+bestaudio/best',
-                'merge_output_format': 'mp4',
-                'ffmpeg_location': FFMPEG_PATH,
-                'ignoreerrors': True,
-                'retries': 5,
-                'fragment_retries': 5,
-                'socket_timeout': 30,
-                'noprogress': True, # We use hooks instead of stdout
-                'quiet': False,
-                'no_warnings': False,
-                'geo_bypass': True,
-                'cachedir': False,
-                'force_ipv4': True,
-                'http_headers': {
-                    'User-Agent': self.session.headers['User-Agent'],
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                },
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['web_embedded', 'web', 'tv']
-                    }
+        import time
+        
+        # Format strings to try in order of preference (fallback chain)
+        format_attempts = [
+            'bestvideo[height<=1080][vcodec!*=av01]+bestaudio/best[height<=1080]/bestvideo+bestaudio/best',
+            'bestvideo+bestaudio/best',
+            'best',
+            'worstvideo+worstaudio/worst',  # Last resort: get anything
+        ]
+        
+        last_error = None
+        
+        for attempt_idx, fmt in enumerate(format_attempts):
+            try:
+                if attempt_idx > 0:
+                    self._push_status(client_id, f'Retrying with format fallback ({attempt_idx + 1}/{len(format_attempts)})...')
+                    # Sleep between retries to avoid 429
+                    time.sleep(3 + attempt_idx * 2)
+                
+                ydl_opts = {
+                    'outtmpl': os.path.join(path, '%(uploader)s - %(title)s.%(ext)s'),
+                    'format': fmt,
+                    'merge_output_format': 'mp4',
+                    'ffmpeg_location': FFMPEG_PATH,
+                    'ignoreerrors': True,
+                    'retries': 10,
+                    'fragment_retries': 10,
+                    'file_access_retries': 5,
+                    'extractor_retries': 5,
+                    'retry_sleep_functions': {'http': lambda n: 2 + n * 2},
+                    'socket_timeout': 60,
+                    'noprogress': True,  # We use hooks instead of stdout
+                    'quiet': False,
+                    'no_warnings': False,
+                    'geo_bypass': True,
+                    'cachedir': False,
+                    'force_ipv4': True,
+                    # Sleep between requests to avoid YouTube 429 rate-limiting
+                    'sleep_interval': 1,
+                    'max_sleep_interval': 5,
+                    'sleep_interval_requests': 1,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Referer': 'https://www.youtube.com/',
+                    },
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['default', 'web'],
+                        }
+                    },
+                    # FFmpeg reconnection for 403 errors on stream fragments
+                    'downloader_args': {
+                        'ffmpeg_i': ['-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5']
+                    },
                 }
-            }
-            if cookies_path:
-                ydl_opts['cookiefile'] = cookies_path
+                if cookies_path:
+                    ydl_opts['cookiefile'] = cookies_path
+                    
+                if PROXY_URL:
+                    ydl_opts['proxy'] = PROXY_URL
                 
-            if PROXY_URL:
-                ydl_opts['proxy'] = PROXY_URL
-            
-            if client_id:
-                ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
-            
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
+                if client_id:
+                    ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
                 
-                if info is None:
-                    return {
-                        'status': 'error',
-                        'message': 'Could not extract video info. The video may be private, age-restricted, or unavailable.'
-                    }
-                
-                if 'entries' in info:  # Playlist
-                    titles = [entry.get('title', 'Unknown') for entry in info['entries'] if entry]
-                    return {
-                        'status': 'success',
-                        'message': f'Downloaded {len(titles)} videos from playlist',
-                        'titles': titles[:5],  # Show first 5 titles
-                        'type': 'playlist'
-                    }
-                else:  # Single video
-                    return {
-                        'status': 'success',
-                        'message': 'YouTube content downloaded successfully!',
-                        'title': info.get('title', 'Unknown'),
-                        'uploader': info.get('uploader', 'Unknown'),
-                        'type': 'video'
-                    }
-        except Exception as e:
-            return {'status': 'error', 'message': f'YouTube error: {str(e)}'}
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    
+                    if info is None:
+                        last_error = 'Could not extract video info. The video may be private, age-restricted, or unavailable.'
+                        continue  # Try next format
+                    
+                    if 'entries' in info:  # Playlist
+                        titles = [entry.get('title', 'Unknown') for entry in info['entries'] if entry]
+                        return {
+                            'status': 'success',
+                            'message': f'Downloaded {len(titles)} videos from playlist',
+                            'titles': titles[:5],  # Show first 5 titles
+                            'type': 'playlist'
+                        }
+                    else:  # Single video
+                        return {
+                            'status': 'success',
+                            'message': 'YouTube content downloaded successfully!',
+                            'title': info.get('title', 'Unknown'),
+                            'uploader': info.get('uploader', 'Unknown'),
+                            'type': 'video'
+                        }
+            except yt_dlp.utils.DownloadError as e:
+                last_error = str(e)
+                print(f"YouTube attempt {attempt_idx + 1} failed (format='{fmt}'): {last_error}")
+                # If it's a format error, try next format; otherwise break
+                if 'Requested format' in last_error or 'No video formats' in last_error or 'Only images' in last_error:
+                    continue
+                else:
+                    break
+            except Exception as e:
+                last_error = str(e)
+                print(f"YouTube attempt {attempt_idx + 1} unexpected error: {last_error}")
+                break
+        
+        return {'status': 'error', 'message': f'YouTube error: {last_error}'}
     
     def download_instagram_content(self, url, path, client_id=None):
         """Download Instagram posts, reels, stories, IGTV"""

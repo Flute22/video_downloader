@@ -4,8 +4,11 @@ services:
     runtime: python
     buildCommand: |
       pip install -r requirements-server.txt
-      apt-get update && apt-get install -y ffmpeg nodejs || true
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2
+      apt-get update && apt-get install -y ffmpeg nodejs npm curl unzip || true
+      curl -fsSL https://deno.land/install.sh | sh || true
+      echo 'export DENO_DIR=/opt/render/.deno' >> /etc/profile
+      echo 'export PATH=$PATH:/opt/render/.deno/bin' >> /etc/profile
+    startCommand: export PATH=$PATH:$HOME/.deno/bin && gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.6"
