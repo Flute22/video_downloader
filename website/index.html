@@ -380,6 +380,46 @@
             .platform-chip .p-icon { font-size: 1rem; }
             .platform-chip .p-name { font-size: .75rem; }
         }
+        /* Progress bar */
+        .progress-wrap {
+            margin-top: 14px;
+            display: none;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .progress-wrap.visible { display: block; }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #d1d5db;
+        }
+        .progress-track {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-fill {
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-top: 6px;
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body>
@@ -455,6 +495,21 @@
                 </div>
                 <div id="dl-detected" style="margin-top:12px;padding:5px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:100px;font-size:.78rem;color:#f59e0b;font-weight:600;display:none;width:fit-content;"></div>
                 <div id="dl-status" style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:500;line-height:1.6;display:none;border-left:3px solid;"></div>
+                
+                <!-- Single Progress Bar -->
+                <div id="single-progress" class="progress-wrap">
+                    <div class="progress-header">
+                        <span id="single-status-text">⏳ Starting...</span>
+                        <span id="single-pct">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="single-fill" class="progress-fill"></div>
+                    </div>
+                    <div class="progress-meta">
+                        <span id="single-speed">-- MiB/s</span>
+                        <span id="single-eta">--:--</span>
+                    </div>
+                </div>
                 <div class="fake-platforms">
                     <div class="fake-badge">▶ YouTube</div>
                     <div class="fake-badge">📷 Instagram</div>
@@ -474,6 +529,21 @@
                     <button id="bulk-btn" class="fake-btn" onclick="doBulkDownload()" style="width:100%;text-align:center;">📦 Download All</button>
                 </div>
                 <div id="bulk-status" style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:500;line-height:1.6;display:none;border-left:3px solid;"></div>
+                
+                <!-- Bulk Progress Bar -->
+                <div id="bulk-progress" class="progress-wrap">
+                    <div class="progress-header">
+                        <span id="bulk-status-text">⏳ Starting...</span>
+                        <span id="bulk-pct">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="bulk-fill" class="progress-fill"></div>
+                    </div>
+                    <div class="progress-meta">
+                        <span id="bulk-speed">-- MiB/s</span>
+                        <span id="bulk-eta">--:--</span>
+                    </div>
+                </div>
             </div>
             <!-- My Downloads -->
             <div id="panel-downloads" class="preview-panel">
@@ -682,16 +752,81 @@
         el.style.background = c[0]; el.style.borderColor = c[1]; el.style.color = c[2];
     }
 
+    /* ---- Check if backend is available ---- */
+    const isHosted = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const NO_BACKEND_MSG = '⚠️ Online downloads are not available on this website.<br><br>📥 <strong>Download the desktop app</strong> (above) to download videos locally on your computer — it works offline, is faster, and supports all platforms!';
+
+    /* ---- SSE Progress Stream Helper ---- */
+    let currentEventSource = null;
+    function startProgressStream(prefix) {
+        if (currentEventSource) currentEventSource.close();
+        const clientId = 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        const wrap = document.getElementById(prefix + '-progress');
+        const statusText = document.getElementById(prefix + '-status-text');
+        const pct = document.getElementById(prefix + '-pct');
+        const fill = document.getElementById(prefix + '-fill');
+        const speed = document.getElementById(prefix + '-speed');
+        const eta = document.getElementById(prefix + '-eta');
+        
+        wrap.classList.add('visible');
+        statusText.textContent = '⏳ Starting...';
+        pct.textContent = '0%';
+        fill.style.width = '0%';
+        speed.textContent = '-- MiB/s';
+        eta.textContent = '--:--';
+        
+        currentEventSource = new EventSource(API_BASE + '/stream-progress?client_id=' + clientId);
+        currentEventSource.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.status === 'downloading') {
+                statusText.textContent = '⬇ Downloading ' + (data.filename || '...');
+                pct.textContent = data.percent;
+                fill.style.width = data.percent;
+                speed.textContent = data.speed;
+                eta.textContent = data.eta;
+            } else if (data.status === 'processing') {
+                statusText.textContent = '⚙️ Processing...';
+                pct.textContent = '100%';
+                fill.style.width = '100%';
+                speed.textContent = 'Done';
+                eta.textContent = '00:00';
+            }
+        };
+        currentEventSource.onerror = function() {
+            currentEventSource.close();
+        };
+        
+        return clientId;
+    }
+
+    function stopProgressStream(prefix) {
+        if (currentEventSource) {
+            currentEventSource.close();
+            currentEventSource = null;
+        }
+        document.getElementById(prefix + '-progress').classList.remove('visible');
+    }
+
     /* ---- Single Download ---- */
     async function doDownload() {
         const url = dlInput.value.trim();
         const status = document.getElementById('dl-status');
         const btn = document.getElementById('dl-btn');
         if (!url) { showStatus(status, 'Please paste a video URL first.', 'error'); toast('Please enter a URL','error'); return; }
+
+        if (isHosted) {
+            showStatus(status, NO_BACKEND_MSG, 'error');
+            toast('Download the desktop app to use this feature', 'info');
+            return;
+        }
+
+        const clientId = startProgressStream('single');
         btn.disabled = true; btn.textContent = '⏳ Downloading...';
-        showStatus(status, '⏳ Downloading... This may take a moment.', 'loading');
+        status.style.display = 'none'; // hide generic status while showing progress bar
+        
         try {
-            const res = await fetch(API_BASE + '/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
+            const res = await fetch(API_BASE + '/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, client_id: clientId}) });
             if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
             const data = await res.json();
             if (data.status === 'success') {
@@ -707,18 +842,14 @@
             }
         } catch(e) {
             console.error(e);
-            let errMsg = '❌ Could not connect to server. Make sure the Flask app is running.';
-            if (window.location.protocol === 'file:') {
-                errMsg = '❌ You cannot run this app from a local file. Please run app.py and visit http://localhost:5000';
-            } else if (e.message.includes('HTTP Error 404') || e.message.includes('HTTP Error 405')) {
-                errMsg = '❌ API endpoint not found. If hosted on Netlify, the Flask backend must be deployed separately.';
-            } else if (e.message !== 'Failed to fetch') {
-                errMsg = '❌ ' + e.message;
-            }
-            showStatus(status, errMsg, 'error');
-            toast('Connection error','error');
+            showStatus(status, '❌ Could not connect to server. Run <strong>python app.py</strong> and visit <strong>http://localhost:5000</strong>', 'error');
+            toast('Server not running','error');
         }
-        finally { btn.disabled = false; btn.textContent = '⬇ Download'; }
+        finally { 
+            stopProgressStream('single');
+            btn.disabled = false; 
+            btn.textContent = '⬇ Download'; 
+        }
     }
 
     /* ---- Bulk Download ---- */
@@ -728,10 +859,19 @@
         const status = document.getElementById('bulk-status');
         const btn = document.getElementById('bulk-btn');
         if (!urls.length) { showStatus(status, 'Please enter at least one URL.', 'error'); toast('Enter URLs first','error'); return; }
+
+        if (isHosted) {
+            showStatus(status, NO_BACKEND_MSG, 'error');
+            toast('Download the desktop app to use this feature', 'info');
+            return;
+        }
+
+        const clientId = startProgressStream('bulk');
         btn.disabled = true; btn.textContent = '⏳ Processing ' + urls.length + ' URLs...';
-        showStatus(status, '⏳ Downloading ' + urls.length + ' URLs... Please wait.', 'loading');
+        status.style.display = 'none'; // hide generic status
+        
         try {
-            const res = await fetch(API_BASE + '/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls}) });
+            const res = await fetch(API_BASE + '/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls, client_id: clientId}) });
             if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
             const data = await res.json();
             if (data.status === 'success') {
@@ -743,19 +883,23 @@
             } else { showStatus(status, '❌ ' + data.message, 'error'); toast('Bulk download failed','error'); }
         } catch(e) {
             console.error(e);
-            let errMsg = '❌ Could not connect to server.';
-            if (window.location.protocol === 'file:') errMsg = '❌ You cannot run this app from a local file.';
-            else if (e.message.includes('HTTP Error 404') || e.message.includes('HTTP Error 405')) errMsg = '❌ API endpoint not found (Netlify deployment requires separate backend).';
-            else if (e.message !== 'Failed to fetch') errMsg = '❌ ' + e.message;
-            showStatus(status, errMsg, 'error');
-            toast('Connection error','error');
+            showStatus(status, '❌ Could not connect to server. Run <strong>python app.py</strong> locally.', 'error');
+            toast('Server not running','error');
         }
-        finally { btn.disabled = false; btn.textContent = '📦 Download All'; }
+        finally { 
+            stopProgressStream('bulk');
+            btn.disabled = false; 
+            btn.textContent = '📦 Download All'; 
+        }
     }
 
     /* ---- Downloads List ---- */
     async function refreshDownloads() {
         const list = document.getElementById('downloads-list');
+        if (isHosted) {
+            list.innerHTML = '<div class="dl-empty" style="color:#fde68a;">📥 Download the desktop app to manage your downloaded files.</div>';
+            return;
+        }
         list.innerHTML = '<div class="dl-empty" style="color:#fde68a;">🔄 Loading...</div>';
         try {
             const res = await fetch(API_BASE + '/downloads');
@@ -771,9 +915,10 @@
                 });
                 list.innerHTML = html;
             } else { list.innerHTML = '<div class="dl-empty">📂 No downloads yet. Paste a URL to get started.</div>'; }
-        } catch(e) { list.innerHTML = '<div class="dl-empty" style="color:#fca5a5;">❌ Could not load downloads.</div>'; }
+        } catch(e) { list.innerHTML = '<div class="dl-empty" style="color:#fca5a5;">❌ Could not load downloads. Is the server running?</div>'; }
     }
     async function clearDownloads() {
+        if (isHosted) { toast('This feature requires the desktop app', 'info'); return; }
         if (!confirm('Delete all downloaded files?')) return;
         try {
             const res = await fetch(API_BASE + '/clear-downloads', { method:'POST', headers:{'Content-Type':'application/json'} });

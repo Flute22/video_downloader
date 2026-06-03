@@ -1,34 +1,31 @@
-from flask import Flask, request, render_template, jsonify, send_file, send_from_directory
+from flask import Flask, request, render_template, jsonify, send_file, send_from_directory, Response
 from flask_cors import CORS
 import os
 import tempfile
-import threading
 import requests
-import json
 import re
-import base64
 from datetime import datetime
 import yt_dlp
 import instaloader
 from werkzeug.utils import secure_filename
 import zipfile
 import shutil
+import queue
+import json
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-this')
+app.config['SECRET_KEY'] = 'your-secret-key-here-change-this'
 
-# Use /tmp on Render (no persistent disk on free tier), local dir otherwise
-IS_RENDER = os.environ.get('RENDER', False)
-if IS_RENDER:
-    DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), 'anyvideo_downloads')
-else:
-    DOWNLOAD_DIR = os.path.join(os.getcwd(), 'downloads')
+# Global dictionary to hold progress queues for each client
+progress_queues = {}
+
+# Downloads directory
+DOWNLOAD_DIR = os.path.join(os.getcwd(), 'downloads')
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
 # Path to ffmpeg for merging video+audio
-import shutil
 FFMPEG_PATH = shutil.which('ffmpeg')
 if not FFMPEG_PATH:
     FFMPEG_PATH = os.path.expanduser('~/AppData/Local/Microsoft/WinGet/Links')
@@ -37,9 +34,8 @@ class UniversalDownloader:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
         })
-        self.youtube_cookiefile = self.prepare_youtube_cookiefile()
         
     def detect_platform(self, url):
         """Detect the platform from URL"""
@@ -76,135 +72,97 @@ class UniversalDownloader:
             filename = filename[:max_length]
         return filename
 
-    def validate_ydl_result(self, info, platform_name):
-        """Normalize yt-dlp failures into a user-facing error."""
-        if info is None:
-            return {
-                'status': 'error',
-                'message': (
-                    f'{platform_name} download failed. The server could not extract media details '
-                    'from this URL. Please try another video or try again later.'
-                )
-            }
-        return None
+    def _create_progress_hook(self, client_id):
+        """Create a yt-dlp progress hook that pushes to the client's queue"""
+        def progress_hook(d):
+            if not client_id or client_id not in progress_queues:
+                return
+            
+            # Remove ANSI escape codes yt-dlp might use for colors
+            def clean_str(s):
+                return re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', str(s)).strip()
+            
+            if d['status'] == 'downloading':
+                progress_queues[client_id].put({
+                    'status': 'downloading',
+                    'percent': clean_str(d.get('_percent_str', '0%')),
+                    'speed': clean_str(d.get('_speed_str', 'Unknown')),
+                    'eta': clean_str(d.get('_eta_str', 'Unknown')),
+                    'filename': os.path.basename(d.get('filename', ''))
+                })
+            elif d['status'] == 'finished':
+                progress_queues[client_id].put({
+                    'status': 'processing',
+                    'percent': '100%',
+                    'speed': 'Processing/Merging...',
+                    'eta': '00:00'
+                })
+        return progress_hook
 
-    def prepare_youtube_cookiefile(self):
-        """Load YouTube cookies from Render/local environment when available."""
-        cookie_file = os.environ.get('YOUTUBE_COOKIES_FILE', '').strip()
-        if cookie_file and os.path.exists(cookie_file):
-            return cookie_file
-
-        cookie_content = os.environ.get('YOUTUBE_COOKIES_CONTENT', '').strip()
-        if not cookie_content:
-            return None
-
-        if cookie_content.startswith('base64:'):
-            cookie_content = base64.b64decode(cookie_content[7:]).decode('utf-8')
-        else:
-            cookie_content = cookie_content.replace('\\n', '\n')
-
-        cookie_path = os.path.join(tempfile.gettempdir(), 'youtube_cookies.txt')
-        with open(cookie_path, 'w', encoding='utf-8') as cookie_handle:
-            cookie_handle.write(cookie_content)
-            if not cookie_content.endswith('\n'):
-                cookie_handle.write('\n')
-        return cookie_path
-
-    def format_download_error(self, platform_name, error):
-        """Return a clearer message for common hosted-server extractor failures."""
-        message = str(error)
-        if platform_name == 'YouTube' and 'Sign in to confirm' in message:
-            return (
-                'YouTube is blocking this hosted server as a bot. Add exported YouTube cookies '
-                'to the Render environment variable YOUTUBE_COOKIES_CONTENT, then redeploy.'
-            )
-        return f'{platform_name} error: {message}'
-
-    def build_ydl_opts(self, path, template, format_selector='best', platform='generic', allow_partial_failures=False):
-        """Create yt-dlp options that behave better on hosted environments."""
-        ydl_opts = {
-            'outtmpl': os.path.join(path, template),
-            'format': format_selector,
-            'merge_output_format': 'mp4',
-            'retries': 3,
-            'fragment_retries': 3,
-            'extractor_retries': 3,
-            'socket_timeout': 30,
-            'noprogress': True,
-            'quiet': True,
-            'no_warnings': True,
-            'geo_bypass': True,
-            'http_headers': {
-                'User-Agent': self.session.headers['User-Agent'],
-                'Accept-Language': 'en-US,en;q=0.9',
-            },
-        }
-
-        if allow_partial_failures:
-            ydl_opts['ignoreerrors'] = True
-
-        if FFMPEG_PATH:
-            ydl_opts['ffmpeg_location'] = FFMPEG_PATH
-
-        if platform == 'youtube':
-            if self.youtube_cookiefile:
-                ydl_opts['cookiefile'] = self.youtube_cookiefile
-
-        return ydl_opts
+    def _push_status(self, client_id, status_msg):
+        """Helper to push a generic status to the client queue"""
+        if client_id and client_id in progress_queues:
+            progress_queues[client_id].put({
+                'status': 'downloading',
+                'percent': '...',
+                'speed': status_msg,
+                'eta': '...'
+            })
     
-    def download_youtube_content(self, url, path):
+    def download_youtube_content(self, url, path, client_id=None):
         """Download YouTube videos, shorts, playlists"""
-        format_fallbacks = [
-            'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
-            'bestvideo+bestaudio/best',
-            'best',
-        ]
-
-        last_error = None
-        for format_selector in format_fallbacks:
-            try:
-                ydl_opts = self.build_ydl_opts(
-                    path,
-                    '%(uploader)s - %(title)s.%(ext)s',
-                    format_selector=format_selector,
-                    platform='youtube',
-                )
-
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(url, download=True)
-                    error_result = self.validate_ydl_result(info, 'YouTube')
-                    if error_result:
-                        return error_result
-
-                    if isinstance(info, dict) and 'entries' in info:  # Playlist
-                        titles = [entry.get('title', 'Unknown') for entry in info['entries'] if entry]
-                        return {
-                            'status': 'success',
-                            'message': f'Downloaded {len(titles)} videos from playlist',
-                            'titles': titles[:5],  # Show first 5 titles
-                            'type': 'playlist'
-                        }
-                    else:  # Single video
-                        return {
-                            'status': 'success',
-                            'message': 'YouTube content downloaded successfully!',
-                            'title': info.get('title', 'Unknown'),
-                            'uploader': info.get('uploader', 'Unknown'),
-                            'type': 'video'
-                        }
-            except yt_dlp.utils.DownloadError as e:
-                last_error = e
-                if 'Requested format is not available' in str(e):
-                    continue
-                return {'status': 'error', 'message': self.format_download_error('YouTube', e)}
-            except Exception as e:
-                return {'status': 'error', 'message': self.format_download_error('YouTube', e)}
-
-        if last_error:
-            return {'status': 'error', 'message': self.format_download_error('YouTube', last_error)}
-        return {'status': 'error', 'message': 'YouTube download failed for this URL.'}
+        try:
+            ydl_opts = {
+                'outtmpl': os.path.join(path, '%(uploader)s - %(title)s.%(ext)s'),
+                'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': FFMPEG_PATH,
+                'ignoreerrors': True,
+                'retries': 3,
+                'fragment_retries': 3,
+                'socket_timeout': 30,
+                'noprogress': True, # We use hooks instead of stdout
+                'quiet': True,
+                'no_warnings': True,
+                'geo_bypass': True,
+                'http_headers': {
+                    'User-Agent': self.session.headers['User-Agent'],
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                },
+            }
+            if client_id:
+                ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                
+                if info is None:
+                    return {
+                        'status': 'error',
+                        'message': 'Could not extract video info. The video may be private, age-restricted, or unavailable.'
+                    }
+                
+                if 'entries' in info:  # Playlist
+                    titles = [entry.get('title', 'Unknown') for entry in info['entries'] if entry]
+                    return {
+                        'status': 'success',
+                        'message': f'Downloaded {len(titles)} videos from playlist',
+                        'titles': titles[:5],  # Show first 5 titles
+                        'type': 'playlist'
+                    }
+                else:  # Single video
+                    return {
+                        'status': 'success',
+                        'message': 'YouTube content downloaded successfully!',
+                        'title': info.get('title', 'Unknown'),
+                        'uploader': info.get('uploader', 'Unknown'),
+                        'type': 'video'
+                    }
+        except Exception as e:
+            return {'status': 'error', 'message': f'YouTube error: {str(e)}'}
     
-    def download_instagram_content(self, url, path):
+    def download_instagram_content(self, url, path, client_id=None):
         """Download Instagram posts, reels, stories, IGTV"""
         try:
             loader = instaloader.Instaloader(
@@ -218,12 +176,15 @@ class UniversalDownloader:
                 compress_json=False
             )
             
+            self._push_status(client_id, "Fetching Instagram data...")
+            
             # Handle different Instagram URL types
             if '/stories/' in url:
                 # Story URL
                 username = self.extract_instagram_username(url)
                 if username:
                     profile = instaloader.Profile.from_username(loader.context, username)
+                    self._push_status(client_id, f"Downloading stories for {username}...")
                     for story in loader.get_stories([profile.userid]):
                         for item in story.get_items():
                             loader.download_storyitem(item, target=username)
@@ -237,6 +198,7 @@ class UniversalDownloader:
                 shortcode = self.extract_instagram_shortcode(url)
                 post = instaloader.Post.from_shortcode(loader.context, shortcode)
                 
+                self._push_status(client_id, f"Downloading {post.owner_username}'s post...")
                 loader.download_post(post, target=post.owner_username)
                 
                 content_type = 'reel' if post.is_video else 'post'
@@ -259,6 +221,7 @@ class UniversalDownloader:
                 for post in profile.get_posts():
                     if count >= 10:  # Limit to 10 recent posts
                         break
+                    self._push_status(client_id, f"Downloading post {count+1}/10...")
                     loader.download_post(post, target=username)
                     count += 1
                 
@@ -271,16 +234,22 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'Instagram error: {str(e)}'}
     
-    def download_tiktok_content(self, url, path):
+    def download_tiktok_content(self, url, path, client_id=None):
         """Download TikTok videos"""
         try:
-            ydl_opts = self.build_ydl_opts(path, 'TikTok_%(uploader)s_%(title)s.%(ext)s')
+            ydl_opts = {
+                'outtmpl': os.path.join(path, 'TikTok_%(uploader)s_%(title)s.%(ext)s'),
+                'format': 'best',
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': FFMPEG_PATH,
+                'quiet': True,
+                'noprogress': True,
+            }
+            if client_id:
+                ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                error_result = self.validate_ydl_result(info, 'TikTok')
-                if error_result:
-                    return error_result
                 return {
                     'status': 'success',
                     'message': 'TikTok video downloaded successfully!',
@@ -291,16 +260,22 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'TikTok error: {str(e)}'}
     
-    def download_twitter_content(self, url, path):
+    def download_twitter_content(self, url, path, client_id=None):
         """Download Twitter/X videos, images, threads"""
         try:
-            ydl_opts = self.build_ydl_opts(path, 'Twitter_%(uploader)s_%(title)s.%(ext)s')
+            ydl_opts = {
+                'outtmpl': os.path.join(path, 'Twitter_%(uploader)s_%(title)s.%(ext)s'),
+                'format': 'best',
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': FFMPEG_PATH,
+                'quiet': True,
+                'noprogress': True,
+            }
+            if client_id:
+                ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                error_result = self.validate_ydl_result(info, 'Twitter/X')
-                if error_result:
-                    return error_result
                 return {
                     'status': 'success',
                     'message': 'Twitter content downloaded successfully!',
@@ -311,16 +286,22 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'Twitter error: {str(e)}'}
     
-    def download_facebook_content(self, url, path):
+    def download_facebook_content(self, url, path, client_id=None):
         """Download Facebook videos, posts"""
         try:
-            ydl_opts = self.build_ydl_opts(path, 'Facebook_%(title)s.%(ext)s')
+            ydl_opts = {
+                'outtmpl': os.path.join(path, 'Facebook_%(title)s.%(ext)s'),
+                'format': 'best',
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': FFMPEG_PATH,
+                'quiet': True,
+                'noprogress': True,
+            }
+            if client_id:
+                ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                error_result = self.validate_ydl_result(info, 'Facebook')
-                if error_result:
-                    return error_result
                 return {
                     'status': 'success',
                     'message': 'Facebook content downloaded successfully!',
@@ -330,16 +311,22 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'Facebook error: {str(e)}'}
     
-    def download_reddit_content(self, url, path):
+    def download_reddit_content(self, url, path, client_id=None):
         """Download Reddit videos, images, gifs"""
         try:
-            ydl_opts = self.build_ydl_opts(path, 'Reddit_%(title)s.%(ext)s')
+            ydl_opts = {
+                'outtmpl': os.path.join(path, 'Reddit_%(title)s.%(ext)s'),
+                'format': 'best',
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': FFMPEG_PATH,
+                'quiet': True,
+                'noprogress': True,
+            }
+            if client_id:
+                ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                error_result = self.validate_ydl_result(info, 'Reddit')
-                if error_result:
-                    return error_result
                 return {
                     'status': 'success',
                     'message': 'Reddit content downloaded successfully!',
@@ -349,16 +336,22 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'Reddit error: {str(e)}'}
     
-    def download_generic_content(self, url, path):
+    def download_generic_content(self, url, path, client_id=None):
         """Download from any supported platform using yt-dlp"""
         try:
-            ydl_opts = self.build_ydl_opts(path, '%(extractor)s_%(title)s.%(ext)s')
+            ydl_opts = {
+                'outtmpl': os.path.join(path, '%(extractor)s_%(title)s.%(ext)s'),
+                'format': 'best',
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': FFMPEG_PATH,
+                'quiet': True,
+                'noprogress': True,
+            }
+            if client_id:
+                ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                error_result = self.validate_ydl_result(info, 'This platform')
-                if error_result:
-                    return error_result
                 return {
                     'status': 'success',
                     'message': 'Content downloaded successfully!',
@@ -389,7 +382,7 @@ class UniversalDownloader:
             return match.group(1)
         return None
     
-    def download_content(self, url, custom_path=None):
+    def download_content(self, url, custom_path=None, client_id=None):
         """Main download function"""
         path = custom_path or DOWNLOAD_DIR
         platform = self.detect_platform(url)
@@ -401,20 +394,20 @@ class UniversalDownloader:
         
         try:
             if platform == 'youtube':
-                return self.download_youtube_content(url, download_folder)
+                return self.download_youtube_content(url, download_folder, client_id)
             elif platform == 'instagram':
-                return self.download_instagram_content(url, download_folder)
+                return self.download_instagram_content(url, download_folder, client_id)
             elif platform == 'tiktok':
-                return self.download_tiktok_content(url, download_folder)
+                return self.download_tiktok_content(url, download_folder, client_id)
             elif platform == 'twitter':
-                return self.download_twitter_content(url, download_folder)
+                return self.download_twitter_content(url, download_folder, client_id)
             elif platform == 'facebook':
-                return self.download_facebook_content(url, download_folder)
+                return self.download_facebook_content(url, download_folder, client_id)
             elif platform == 'reddit':
-                return self.download_reddit_content(url, download_folder)
+                return self.download_reddit_content(url, download_folder, client_id)
             else:
                 # Try generic download for other platforms
-                return self.download_generic_content(url, download_folder)
+                return self.download_generic_content(url, download_folder, client_id)
                 
         except Exception as e:
             return {'status': 'error', 'message': f'Unexpected error: {str(e)}'}
@@ -437,12 +430,47 @@ def app_ui():
     """Full app UI page"""
     return render_template('index.html')
 
+@app.route('/stream-progress')
+def stream_progress():
+    """Server-Sent Events endpoint for real-time download progress"""
+    client_id = request.args.get('client_id')
+    if not client_id:
+        return jsonify({'error': 'Missing client_id'}), 400
+
+    # Initialize queue for this client if it doesn't exist
+    if client_id not in progress_queues:
+        progress_queues[client_id] = queue.Queue()
+
+    def generate():
+        q = progress_queues[client_id]
+        try:
+            while True:
+                # Block until a message is available
+                message = q.get(timeout=30)
+                if message is None: # None means close connection
+                    yield "event: close\ndata: \n\n"
+                    break
+                
+                # Send SSE data
+                yield f"data: {json.dumps(message)}\n\n"
+        except queue.Empty:
+            # Keep-alive or timeout
+            pass
+        except Exception as e:
+            print(f"SSE Error: {e}")
+        finally:
+            if client_id in progress_queues:
+                del progress_queues[client_id]
+                
+    return Response(generate(), mimetype='text/event-stream')
+
 @app.route('/download', methods=['POST'])
 def download():
     """Handle download requests"""
     try:
         data = request.get_json()
         url = data.get('url', '').strip()
+        client_id = data.get('client_id')
         
         if not url:
             return jsonify({'status': 'error', 'message': 'URL is required'})
@@ -451,9 +479,13 @@ def download():
         platform = downloader.detect_platform(url)
         
         # Start download
-        result = downloader.download_content(url)
+        result = downloader.download_content(url, client_id=client_id)
         result['platform'] = platform
         
+        # Signal the SSE stream to close
+        if client_id and client_id in progress_queues:
+            progress_queues[client_id].put(None)
+            
         return jsonify(result)
         
     except Exception as e:
@@ -465,17 +497,29 @@ def bulk_download():
     try:
         data = request.get_json()
         urls = data.get('urls', [])
+        client_id = data.get('client_id')
         
         if not urls:
             return jsonify({'status': 'error', 'message': 'URLs list is required'})
         
         results = []
-        for url in urls:
+        for i, url in enumerate(urls):
             if url.strip():
-                result = downloader.download_content(url.strip())
+                if client_id and client_id in progress_queues:
+                    progress_queues[client_id].put({
+                        'status': 'downloading',
+                        'percent': '...',
+                        'speed': f'File {i+1} of {len(urls)}',
+                        'eta': '...'
+                    })
+                
+                result = downloader.download_content(url.strip(), client_id=client_id)
                 result['url'] = url
                 results.append(result)
         
+        if client_id and client_id in progress_queues:
+            progress_queues[client_id].put(None)
+            
         return jsonify({
             'status': 'success',
             'message': f'Processed {len(results)} URLs',
@@ -596,10 +640,6 @@ def clear_downloads():
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error clearing downloads: {str(e)}'})
 
-@app.route('/health')
-def health():
-    """Health check for Render"""
-    return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
     print("=" * 60)
