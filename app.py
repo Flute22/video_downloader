@@ -130,8 +130,8 @@ class UniversalDownloader:
                 'fragment_retries': 3,
                 'socket_timeout': 30,
                 'noprogress': True, # We use hooks instead of stdout
-                'quiet': True,
-                'no_warnings': True,
+                'quiet': False,
+                'no_warnings': False,
                 'geo_bypass': True,
                 'http_headers': {
                     'User-Agent': self.session.headers['User-Agent'],
@@ -140,7 +140,7 @@ class UniversalDownloader:
                 },
                 'extractor_args': {
                     'youtube': {
-                        'player_client': ['android', 'web']
+                        'player_client': ['web_embedded', 'tv']
                     }
                 }
             }

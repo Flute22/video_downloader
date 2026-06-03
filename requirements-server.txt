@@ -1,6 +1,6 @@
 Flask>=3.0.0
 flask-cors>=4.0.0
 gunicorn>=21.2.0
-yt-dlp>=2025.1.0
+yt-dlp
 instaloader>=4.10
 requests>=2.31.0
