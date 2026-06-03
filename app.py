@@ -134,6 +134,7 @@ class UniversalDownloader:
                 'no_warnings': False,
                 'geo_bypass': True,
                 'cachedir': False,
+                'force_ipv4': True,
                 'http_headers': {
                     'User-Agent': self.session.headers['User-Agent'],
                     'Accept-Language': 'en-US,en;q=0.9',
