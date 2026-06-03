@@ -133,6 +133,7 @@ class UniversalDownloader:
                 'quiet': False,
                 'no_warnings': False,
                 'geo_bypass': True,
+                'cachedir': False,
                 'http_headers': {
                     'User-Agent': self.session.headers['User-Agent'],
                     'Accept-Language': 'en-US,en;q=0.9',
@@ -140,7 +141,7 @@ class UniversalDownloader:
                 },
                 'extractor_args': {
                     'youtube': {
-                        'player_client': ['web_embedded', 'tv']
+                        'player_client': ['web_embedded', 'web', 'tv']
                     }
                 }
             }
