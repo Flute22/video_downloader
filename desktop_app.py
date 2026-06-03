@@ -11,6 +11,8 @@ import subprocess
 import platform
 from datetime import datetime
 from pathlib import Path
+import webbrowser
+import json
 
 import customtkinter as ctk
 from PIL import Image
@@ -243,6 +245,8 @@ elif platform.system() == 'Windows':
 else:
     FONT_FAMILY = 'Ubuntu'
 
+APP_VERSION = '1.0.0'
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Application
@@ -274,6 +278,9 @@ class AnyVideoApp(ctk.CTk):
         self._build_header()
         self._build_tabs()
         self._build_status_bar()
+
+        # Check for updates in the background slightly after launch
+        self.after(2000, self._check_for_updates)
 
     # ──────────────────────────────────────────────────────────────────────
     # Header
@@ -733,11 +740,100 @@ class AnyVideoApp(ctk.CTk):
             self.after(0, self._refresh_files)
 
         threading.Thread(target=worker, daemon=True).start()
-
     # ──────────────────────────────────────────────────────────────────────
     # Downloads viewer
     # ──────────────────────────────────────────────────────────────────────
     def _refresh_files(self):
+        self._build_file_list()
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Auto-Updater
+    # ──────────────────────────────────────────────────────────────────────
+    def _check_for_updates(self):
+        def worker():
+            try:
+                # Add timestamp to avoid caching
+                url = f"https://raw.githubusercontent.com/Flute22/video_downloader/main/website/version.json?t={int(datetime.now().timestamp())}"
+                resp = requests.get(url, timeout=5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    remote_version = data.get("version", "1.0.0")
+                    # simple version comparison
+                    if self._parse_version(remote_version) > self._parse_version(APP_VERSION):
+                        self.after(0, lambda: self._show_update_dialog(remote_version, data.get("download_url", "")))
+            except Exception as e:
+                pass # Fail silently for updates
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _parse_version(self, v_str):
+        # Convert "1.0.1" to (1, 0, 1)
+        try:
+            return tuple(map(int, v_str.strip().split('.')))
+        except:
+            return (0, 0, 0)
+
+    def _show_update_dialog(self, new_version, download_url):
+        # Prevent opening multiple dialogs
+        if hasattr(self, "_update_dialog_open") and self._update_dialog_open:
+            return
+        self._update_dialog_open = True
+
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Update Available")
+        dialog.geometry("450x240")
+        dialog.resizable(False, False)
+        dialog.attributes("-topmost", True)
+        
+        # Center the dialog
+        dialog.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - 450) // 2
+        y = self.winfo_y() + (self.winfo_height() - 240) // 2
+        dialog.geometry(f"+{x}+{y}")
+
+        ctk.CTkLabel(
+            dialog, text="🎉 Update Available!",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"),
+            text_color=COLORS['accent']
+        ).pack(pady=(25, 5))
+
+        ctk.CTkLabel(
+            dialog, text=f"A new version of AnyVideo (v{new_version}) is ready to download.",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            text_color=COLORS['text_primary']
+        ).pack(pady=5)
+
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(pady=(30, 20))
+
+        def on_update():
+            if download_url:
+                webbrowser.open(download_url)
+            dialog.destroy()
+
+        ctk.CTkButton(
+            btn_frame, text="Download Now",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            fg_color=COLORS['accent'], hover_color=COLORS['accent_hover'],
+            text_color="#000000", width=140, height=40,
+            command=on_update
+        ).pack(side="left", padx=10)
+
+        ctk.CTkButton(
+            btn_frame, text="Maybe Later",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            fg_color=COLORS['bg_input'], hover_color=COLORS['bg_hover'],
+            text_color=COLORS['text_primary'], width=140, height=40,
+            command=dialog.destroy
+        ).pack(side="left", padx=10)
+
+        def on_close():
+            self._update_dialog_open = False
+            dialog.destroy()
+            
+        dialog.protocol("WM_DELETE_WINDOW", on_close)
+
+    def _build_file_list(self):
         for widget in self.files_scroll.winfo_children():
             widget.destroy()
 
