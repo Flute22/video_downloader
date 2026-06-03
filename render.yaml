@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: anyvideo-backend
+    runtime: python
+    buildCommand: |
+      pip install -r requirements-server.txt
+      apt-get update && apt-get install -y ffmpeg || true
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.6"
+      - key: RENDER
+        value: "true"
+    plan: free

@@ -752,11 +752,7 @@
         el.style.background = c[0]; el.style.borderColor = c[1]; el.style.color = c[2];
     }
 
-    /* ---- Check if backend is available ---- */
-    const isHosted = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    const NO_BACKEND_MSG = '⚠️ Online downloads are not available on this website.<br><br>📥 <strong>Download the desktop app</strong> (above) to download videos locally on your computer — it works offline, is faster, and supports all platforms!';
-
-    /* ---- SSE Progress Stream Helper ---- */
+    /* ---- Single Download ---- */
     let currentEventSource = null;
     function startProgressStream(prefix) {
         if (currentEventSource) currentEventSource.close();
@@ -815,12 +811,6 @@
         const btn = document.getElementById('dl-btn');
         if (!url) { showStatus(status, 'Please paste a video URL first.', 'error'); toast('Please enter a URL','error'); return; }
 
-        if (isHosted) {
-            showStatus(status, NO_BACKEND_MSG, 'error');
-            toast('Download the desktop app to use this feature', 'info');
-            return;
-        }
-
         const clientId = startProgressStream('single');
         btn.disabled = true; btn.textContent = '⏳ Downloading...';
         status.style.display = 'none'; // hide generic status while showing progress bar
@@ -860,12 +850,6 @@
         const btn = document.getElementById('bulk-btn');
         if (!urls.length) { showStatus(status, 'Please enter at least one URL.', 'error'); toast('Enter URLs first','error'); return; }
 
-        if (isHosted) {
-            showStatus(status, NO_BACKEND_MSG, 'error');
-            toast('Download the desktop app to use this feature', 'info');
-            return;
-        }
-
         const clientId = startProgressStream('bulk');
         btn.disabled = true; btn.textContent = '⏳ Processing ' + urls.length + ' URLs...';
         status.style.display = 'none'; // hide generic status
@@ -896,10 +880,6 @@
     /* ---- Downloads List ---- */
     async function refreshDownloads() {
         const list = document.getElementById('downloads-list');
-        if (isHosted) {
-            list.innerHTML = '<div class="dl-empty" style="color:#fde68a;">📥 Download the desktop app to manage your downloaded files.</div>';
-            return;
-        }
         list.innerHTML = '<div class="dl-empty" style="color:#fde68a;">🔄 Loading...</div>';
         try {
             const res = await fetch(API_BASE + '/downloads');
@@ -918,7 +898,6 @@
         } catch(e) { list.innerHTML = '<div class="dl-empty" style="color:#fca5a5;">❌ Could not load downloads. Is the server running?</div>'; }
     }
     async function clearDownloads() {
-        if (isHosted) { toast('This feature requires the desktop app', 'info'); return; }
         if (!confirm('Delete all downloaded files?')) return;
         try {
             const res = await fetch(API_BASE + '/clear-downloads', { method:'POST', headers:{'Content-Type':'application/json'} });

@@ -20,10 +20,18 @@ app.config['SECRET_KEY'] = 'your-secret-key-here-change-this'
 # Global dictionary to hold progress queues for each client
 progress_queues = {}
 
-# Downloads directory
-DOWNLOAD_DIR = os.path.join(os.getcwd(), 'downloads')
+# Use /tmp on Render (no persistent disk on free tier), local dir otherwise
+IS_RENDER = os.environ.get('RENDER', False)
+if IS_RENDER:
+    DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), 'anyvideo_downloads')
+else:
+    DOWNLOAD_DIR = os.path.join(os.getcwd(), 'downloads')
+
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
+
+# Optional Proxy
+PROXY_URL = os.environ.get('PROXY_URL', '')
 
 # Path to ffmpeg for merging video+audio
 FFMPEG_PATH = shutil.which('ffmpeg')
@@ -130,7 +138,15 @@ class UniversalDownloader:
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 },
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['android', 'web']
+                    }
+                }
             }
+            if PROXY_URL:
+                ydl_opts['proxy'] = PROXY_URL
+            
             if client_id:
                 ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
