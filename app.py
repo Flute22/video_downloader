@@ -154,40 +154,55 @@ class UniversalDownloader:
     
     def download_youtube_content(self, url, path):
         """Download YouTube videos, shorts, playlists"""
-        try:
-            ydl_opts = self.build_ydl_opts(
-                path,
-                '%(uploader)s - %(title)s.%(ext)s',
-                format_selector='bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
-                platform='youtube',
-            )
-            
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                error_result = self.validate_ydl_result(info, 'YouTube')
-                if error_result:
-                    return error_result
+        format_fallbacks = [
+            'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+            'bestvideo+bestaudio/best',
+            'best',
+        ]
 
-                if isinstance(info, dict) and 'entries' in info:  # Playlist
-                    titles = [entry.get('title', 'Unknown') for entry in info['entries'] if entry]
-                    return {
-                        'status': 'success',
-                        'message': f'Downloaded {len(titles)} videos from playlist',
-                        'titles': titles[:5],  # Show first 5 titles
-                        'type': 'playlist'
-                    }
-                else:  # Single video
-                    return {
-                        'status': 'success',
-                        'message': 'YouTube content downloaded successfully!',
-                        'title': info.get('title', 'Unknown'),
-                        'uploader': info.get('uploader', 'Unknown'),
-                        'type': 'video'
-                    }
-        except yt_dlp.utils.DownloadError as e:
-            return {'status': 'error', 'message': self.format_download_error('YouTube', e)}
-        except Exception as e:
-            return {'status': 'error', 'message': self.format_download_error('YouTube', e)}
+        last_error = None
+        for format_selector in format_fallbacks:
+            try:
+                ydl_opts = self.build_ydl_opts(
+                    path,
+                    '%(uploader)s - %(title)s.%(ext)s',
+                    format_selector=format_selector,
+                    platform='youtube',
+                )
+
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    error_result = self.validate_ydl_result(info, 'YouTube')
+                    if error_result:
+                        return error_result
+
+                    if isinstance(info, dict) and 'entries' in info:  # Playlist
+                        titles = [entry.get('title', 'Unknown') for entry in info['entries'] if entry]
+                        return {
+                            'status': 'success',
+                            'message': f'Downloaded {len(titles)} videos from playlist',
+                            'titles': titles[:5],  # Show first 5 titles
+                            'type': 'playlist'
+                        }
+                    else:  # Single video
+                        return {
+                            'status': 'success',
+                            'message': 'YouTube content downloaded successfully!',
+                            'title': info.get('title', 'Unknown'),
+                            'uploader': info.get('uploader', 'Unknown'),
+                            'type': 'video'
+                        }
+            except yt_dlp.utils.DownloadError as e:
+                last_error = e
+                if 'Requested format is not available' in str(e):
+                    continue
+                return {'status': 'error', 'message': self.format_download_error('YouTube', e)}
+            except Exception as e:
+                return {'status': 'error', 'message': self.format_download_error('YouTube', e)}
+
+        if last_error:
+            return {'status': 'error', 'message': self.format_download_error('YouTube', last_error)}
+        return {'status': 'error', 'message': 'YouTube download failed for this URL.'}
     
     def download_instagram_content(self, url, path):
         """Download Instagram posts, reels, stories, IGTV"""
