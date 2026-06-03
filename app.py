@@ -117,7 +117,7 @@ class UniversalDownloader:
                 'eta': '...'
             })
     
-    def download_youtube_content(self, url, path, client_id=None):
+    def download_youtube_content(self, url, path, client_id=None, cookies_path=None):
         """Download YouTube videos, shorts, playlists"""
         try:
             ydl_opts = {
@@ -146,6 +146,9 @@ class UniversalDownloader:
                     }
                 }
             }
+            if cookies_path:
+                ydl_opts['cookiefile'] = cookies_path
+                
             if PROXY_URL:
                 ydl_opts['proxy'] = PROXY_URL
             
@@ -252,7 +255,7 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'Instagram error: {str(e)}'}
     
-    def download_tiktok_content(self, url, path, client_id=None):
+    def download_tiktok_content(self, url, path, client_id=None, cookies_path=None):
         """Download TikTok videos"""
         try:
             ydl_opts = {
@@ -263,6 +266,8 @@ class UniversalDownloader:
                 'quiet': True,
                 'noprogress': True,
             }
+            if cookies_path:
+                ydl_opts['cookiefile'] = cookies_path
             if client_id:
                 ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
@@ -278,7 +283,7 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'TikTok error: {str(e)}'}
     
-    def download_twitter_content(self, url, path, client_id=None):
+    def download_twitter_content(self, url, path, client_id=None, cookies_path=None):
         """Download Twitter/X videos, images, threads"""
         try:
             ydl_opts = {
@@ -289,6 +294,8 @@ class UniversalDownloader:
                 'quiet': True,
                 'noprogress': True,
             }
+            if cookies_path:
+                ydl_opts['cookiefile'] = cookies_path
             if client_id:
                 ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
@@ -304,7 +311,7 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'Twitter error: {str(e)}'}
     
-    def download_facebook_content(self, url, path, client_id=None):
+    def download_facebook_content(self, url, path, client_id=None, cookies_path=None):
         """Download Facebook videos, posts"""
         try:
             ydl_opts = {
@@ -315,6 +322,8 @@ class UniversalDownloader:
                 'quiet': True,
                 'noprogress': True,
             }
+            if cookies_path:
+                ydl_opts['cookiefile'] = cookies_path
             if client_id:
                 ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
@@ -329,7 +338,7 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'Facebook error: {str(e)}'}
     
-    def download_reddit_content(self, url, path, client_id=None):
+    def download_reddit_content(self, url, path, client_id=None, cookies_path=None):
         """Download Reddit videos, images, gifs"""
         try:
             ydl_opts = {
@@ -340,6 +349,8 @@ class UniversalDownloader:
                 'quiet': True,
                 'noprogress': True,
             }
+            if cookies_path:
+                ydl_opts['cookiefile'] = cookies_path
             if client_id:
                 ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
@@ -354,7 +365,7 @@ class UniversalDownloader:
         except Exception as e:
             return {'status': 'error', 'message': f'Reddit error: {str(e)}'}
     
-    def download_generic_content(self, url, path, client_id=None):
+    def download_generic_content(self, url, path, client_id=None, cookies_path=None):
         """Download from any supported platform using yt-dlp"""
         try:
             ydl_opts = {
@@ -365,6 +376,8 @@ class UniversalDownloader:
                 'quiet': True,
                 'noprogress': True,
             }
+            if cookies_path:
+                ydl_opts['cookiefile'] = cookies_path
             if client_id:
                 ydl_opts['progress_hooks'] = [self._create_progress_hook(client_id)]
             
@@ -400,7 +413,7 @@ class UniversalDownloader:
             return match.group(1)
         return None
     
-    def download_content(self, url, custom_path=None, client_id=None):
+    def download_content(self, url, custom_path=None, client_id=None, cookies_path=None):
         """Main download function"""
         path = custom_path or DOWNLOAD_DIR
         platform = self.detect_platform(url)
@@ -412,20 +425,20 @@ class UniversalDownloader:
         
         try:
             if platform == 'youtube':
-                return self.download_youtube_content(url, download_folder, client_id)
+                return self.download_youtube_content(url, download_folder, client_id, cookies_path)
             elif platform == 'instagram':
                 return self.download_instagram_content(url, download_folder, client_id)
             elif platform == 'tiktok':
-                return self.download_tiktok_content(url, download_folder, client_id)
+                return self.download_tiktok_content(url, download_folder, client_id, cookies_path)
             elif platform == 'twitter':
-                return self.download_twitter_content(url, download_folder, client_id)
+                return self.download_twitter_content(url, download_folder, client_id, cookies_path)
             elif platform == 'facebook':
-                return self.download_facebook_content(url, download_folder, client_id)
+                return self.download_facebook_content(url, download_folder, client_id, cookies_path)
             elif platform == 'reddit':
-                return self.download_reddit_content(url, download_folder, client_id)
+                return self.download_reddit_content(url, download_folder, client_id, cookies_path)
             else:
                 # Try generic download for other platforms
-                return self.download_generic_content(url, download_folder, client_id)
+                return self.download_generic_content(url, download_folder, client_id, cookies_path)
                 
         except Exception as e:
             return {'status': 'error', 'message': f'Unexpected error: {str(e)}'}
@@ -485,19 +498,32 @@ def stream_progress():
 @app.route('/download', methods=['POST'])
 def download():
     """Handle download requests"""
+    temp_cookies_file = None
     try:
         data = request.get_json()
         url = data.get('url', '').strip()
         client_id = data.get('client_id')
+        cookies = data.get('cookies', '').strip()
         
         if not url:
             return jsonify({'status': 'error', 'message': 'URL is required'})
+            
+        cookies_path = None
+        if cookies:
+            try:
+                temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', encoding='utf-8')
+                temp_file.write(cookies)
+                temp_file.close()
+                cookies_path = temp_file.name
+                temp_cookies_file = temp_file.name
+            except Exception as e:
+                print(f"Error writing temp cookies: {e}")
         
         # Detect platform automatically
         platform = downloader.detect_platform(url)
         
         # Start download
-        result = downloader.download_content(url, client_id=client_id)
+        result = downloader.download_content(url, client_id=client_id, cookies_path=cookies_path)
         result['platform'] = platform
         
         # Signal the SSE stream to close
@@ -508,17 +534,36 @@ def download():
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Server error: {str(e)}'})
+    finally:
+        if temp_cookies_file and os.path.exists(temp_cookies_file):
+            try:
+                os.unlink(temp_cookies_file)
+            except Exception:
+                pass
 
 @app.route('/bulk-download', methods=['POST'])
 def bulk_download():
     """Handle bulk download requests"""
+    temp_cookies_file = None
     try:
         data = request.get_json()
         urls = data.get('urls', [])
         client_id = data.get('client_id')
+        cookies = data.get('cookies', '').strip()
         
         if not urls:
             return jsonify({'status': 'error', 'message': 'URLs list is required'})
+            
+        cookies_path = None
+        if cookies:
+            try:
+                temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', encoding='utf-8')
+                temp_file.write(cookies)
+                temp_file.close()
+                cookies_path = temp_file.name
+                temp_cookies_file = temp_file.name
+            except Exception as e:
+                print(f"Error writing temp cookies: {e}")
         
         results = []
         for i, url in enumerate(urls):
@@ -531,7 +576,7 @@ def bulk_download():
                         'eta': '...'
                     })
                 
-                result = downloader.download_content(url.strip(), client_id=client_id)
+                result = downloader.download_content(url.strip(), client_id=client_id, cookies_path=cookies_path)
                 result['url'] = url
                 results.append(result)
         
@@ -546,6 +591,12 @@ def bulk_download():
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Bulk download error: {str(e)}'})
+    finally:
+        if temp_cookies_file and os.path.exists(temp_cookies_file):
+            try:
+                os.unlink(temp_cookies_file)
+            except Exception:
+                pass
 
 @app.route('/downloads')
 def list_downloads():
