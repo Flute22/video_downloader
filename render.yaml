@@ -9,4 +9,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.6"
+      - key: RENDER
+        value: "true"
+      - key: YOUTUBE_COOKIES_CONTENT
+        sync: false
     plan: free

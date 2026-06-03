@@ -6,6 +6,7 @@ import threading
 import requests
 import json
 import re
+import base64
 from datetime import datetime
 import yt_dlp
 import instaloader
@@ -38,6 +39,7 @@ class UniversalDownloader:
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
+        self.youtube_cookiefile = self.prepare_youtube_cookiefile()
         
     def detect_platform(self, url):
         """Detect the platform from URL"""
@@ -86,6 +88,38 @@ class UniversalDownloader:
             }
         return None
 
+    def prepare_youtube_cookiefile(self):
+        """Load YouTube cookies from Render/local environment when available."""
+        cookie_file = os.environ.get('YOUTUBE_COOKIES_FILE', '').strip()
+        if cookie_file and os.path.exists(cookie_file):
+            return cookie_file
+
+        cookie_content = os.environ.get('YOUTUBE_COOKIES_CONTENT', '').strip()
+        if not cookie_content:
+            return None
+
+        if cookie_content.startswith('base64:'):
+            cookie_content = base64.b64decode(cookie_content[7:]).decode('utf-8')
+        else:
+            cookie_content = cookie_content.replace('\\n', '\n')
+
+        cookie_path = os.path.join(tempfile.gettempdir(), 'youtube_cookies.txt')
+        with open(cookie_path, 'w', encoding='utf-8') as cookie_handle:
+            cookie_handle.write(cookie_content)
+            if not cookie_content.endswith('\n'):
+                cookie_handle.write('\n')
+        return cookie_path
+
+    def format_download_error(self, platform_name, error):
+        """Return a clearer message for common hosted-server extractor failures."""
+        message = str(error)
+        if platform_name == 'YouTube' and 'Sign in to confirm' in message:
+            return (
+                'YouTube is blocking this hosted server as a bot. Add exported YouTube cookies '
+                'to the Render environment variable YOUTUBE_COOKIES_CONTENT, then redeploy.'
+            )
+        return f'{platform_name} error: {message}'
+
     def build_ydl_opts(self, path, template, format_selector='best', platform='generic', allow_partial_failures=False):
         """Create yt-dlp options that behave better on hosted environments."""
         ydl_opts = {
@@ -113,14 +147,8 @@ class UniversalDownloader:
             ydl_opts['ffmpeg_location'] = FFMPEG_PATH
 
         if platform == 'youtube':
-            ydl_opts.update({
-                'nocheckcertificate': True,
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android', 'web', 'tv_embedded'],
-                    }
-                },
-            })
+            if self.youtube_cookiefile:
+                ydl_opts['cookiefile'] = self.youtube_cookiefile
 
         return ydl_opts
     
@@ -157,9 +185,9 @@ class UniversalDownloader:
                         'type': 'video'
                     }
         except yt_dlp.utils.DownloadError as e:
-            return {'status': 'error', 'message': f'YouTube error: {str(e)}'}
+            return {'status': 'error', 'message': self.format_download_error('YouTube', e)}
         except Exception as e:
-            return {'status': 'error', 'message': f'YouTube error: {str(e)}'}
+            return {'status': 'error', 'message': self.format_download_error('YouTube', e)}
     
     def download_instagram_content(self, url, path):
         """Download Instagram posts, reels, stories, IGTV"""
