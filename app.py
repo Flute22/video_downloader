@@ -85,17 +85,54 @@ class UniversalDownloader:
                 )
             }
         return None
+
+    def build_ydl_opts(self, path, template, format_selector='best', platform='generic', allow_partial_failures=False):
+        """Create yt-dlp options that behave better on hosted environments."""
+        ydl_opts = {
+            'outtmpl': os.path.join(path, template),
+            'format': format_selector,
+            'merge_output_format': 'mp4',
+            'retries': 3,
+            'fragment_retries': 3,
+            'extractor_retries': 3,
+            'socket_timeout': 30,
+            'noprogress': True,
+            'quiet': True,
+            'no_warnings': True,
+            'geo_bypass': True,
+            'http_headers': {
+                'User-Agent': self.session.headers['User-Agent'],
+                'Accept-Language': 'en-US,en;q=0.9',
+            },
+        }
+
+        if allow_partial_failures:
+            ydl_opts['ignoreerrors'] = True
+
+        if FFMPEG_PATH:
+            ydl_opts['ffmpeg_location'] = FFMPEG_PATH
+
+        if platform == 'youtube':
+            ydl_opts.update({
+                'nocheckcertificate': True,
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['android', 'web', 'tv_embedded'],
+                    }
+                },
+            })
+
+        return ydl_opts
     
     def download_youtube_content(self, url, path):
         """Download YouTube videos, shorts, playlists"""
         try:
-            ydl_opts = {
-                'outtmpl': os.path.join(path, '%(uploader)s - %(title)s.%(ext)s'),
-                'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
-                'merge_output_format': 'mp4',
-                'ffmpeg_location': FFMPEG_PATH,
-                'ignoreerrors': True,
-            }
+            ydl_opts = self.build_ydl_opts(
+                path,
+                '%(uploader)s - %(title)s.%(ext)s',
+                format_selector='bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+                platform='youtube',
+            )
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -119,6 +156,8 @@ class UniversalDownloader:
                         'uploader': info.get('uploader', 'Unknown'),
                         'type': 'video'
                     }
+        except yt_dlp.utils.DownloadError as e:
+            return {'status': 'error', 'message': f'YouTube error: {str(e)}'}
         except Exception as e:
             return {'status': 'error', 'message': f'YouTube error: {str(e)}'}
     
@@ -192,12 +231,7 @@ class UniversalDownloader:
     def download_tiktok_content(self, url, path):
         """Download TikTok videos"""
         try:
-            ydl_opts = {
-                'outtmpl': os.path.join(path, 'TikTok_%(uploader)s_%(title)s.%(ext)s'),
-                'format': 'best',
-                'merge_output_format': 'mp4',
-                'ffmpeg_location': FFMPEG_PATH,
-            }
+            ydl_opts = self.build_ydl_opts(path, 'TikTok_%(uploader)s_%(title)s.%(ext)s')
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -217,12 +251,7 @@ class UniversalDownloader:
     def download_twitter_content(self, url, path):
         """Download Twitter/X videos, images, threads"""
         try:
-            ydl_opts = {
-                'outtmpl': os.path.join(path, 'Twitter_%(uploader)s_%(title)s.%(ext)s'),
-                'format': 'best',
-                'merge_output_format': 'mp4',
-                'ffmpeg_location': FFMPEG_PATH,
-            }
+            ydl_opts = self.build_ydl_opts(path, 'Twitter_%(uploader)s_%(title)s.%(ext)s')
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -242,12 +271,7 @@ class UniversalDownloader:
     def download_facebook_content(self, url, path):
         """Download Facebook videos, posts"""
         try:
-            ydl_opts = {
-                'outtmpl': os.path.join(path, 'Facebook_%(title)s.%(ext)s'),
-                'format': 'best',
-                'merge_output_format': 'mp4',
-                'ffmpeg_location': FFMPEG_PATH,
-            }
+            ydl_opts = self.build_ydl_opts(path, 'Facebook_%(title)s.%(ext)s')
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -266,12 +290,7 @@ class UniversalDownloader:
     def download_reddit_content(self, url, path):
         """Download Reddit videos, images, gifs"""
         try:
-            ydl_opts = {
-                'outtmpl': os.path.join(path, 'Reddit_%(title)s.%(ext)s'),
-                'format': 'best',
-                'merge_output_format': 'mp4',
-                'ffmpeg_location': FFMPEG_PATH,
-            }
+            ydl_opts = self.build_ydl_opts(path, 'Reddit_%(title)s.%(ext)s')
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -290,12 +309,7 @@ class UniversalDownloader:
     def download_generic_content(self, url, path):
         """Download from any supported platform using yt-dlp"""
         try:
-            ydl_opts = {
-                'outtmpl': os.path.join(path, '%(extractor)s_%(title)s.%(ext)s'),
-                'format': 'best',
-                'merge_output_format': 'mp4',
-                'ffmpeg_location': FFMPEG_PATH,
-            }
+            ydl_opts = self.build_ydl_opts(path, '%(extractor)s_%(title)s.%(ext)s')
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
