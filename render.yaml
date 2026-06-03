@@ -4,7 +4,7 @@ services:
     runtime: python
     buildCommand: |
       pip install -r requirements-server.txt
-      apt-get update && apt-get install -y ffmpeg || true
+      apt-get update && apt-get install -y ffmpeg nodejs || true
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2
     envVars:
       - key: PYTHON_VERSION

@@ -139,12 +139,12 @@ class UniversalDownloader:
         try:
             ydl_opts = {
                 'outtmpl': os.path.join(path, '%(uploader)s - %(title)s.%(ext)s'),
-                'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+                'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/bestvideo+bestaudio/best',
                 'merge_output_format': 'mp4',
                 'ffmpeg_location': FFMPEG_PATH,
                 'ignoreerrors': True,
-                'retries': 3,
-                'fragment_retries': 3,
+                'retries': 5,
+                'fragment_retries': 5,
                 'socket_timeout': 30,
                 'noprogress': True, # We use hooks instead of stdout
                 'quiet': False,
