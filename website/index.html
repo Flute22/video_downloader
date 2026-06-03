@@ -471,50 +471,61 @@
     </div>
 </section>
 
-<!-- App Required Banner -->
-<section class="preview-section" id="try-online" style="padding: 0 24px 100px;">
-    <div class="preview-wrapper" style="max-width: 700px; margin: 0 auto;">
-        <div class="preview-inner" style="padding: 56px 40px; text-align: center;">
-
-            <!-- Icon -->
-            <div style="width: 80px; height: 80px; border-radius: 22px; background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(239,68,68,.1)); border: 1px solid rgba(245,158,11,.25); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin: 0 auto 28px;">⬇</div>
-
-            <!-- Heading -->
-            <h2 style="font-size: 1.7rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 14px;">This is a showcase website</h2>
-
-            <!-- Subtext -->
-            <p style="color: #a3a3a3; font-size: 1rem; line-height: 1.7; max-width: 480px; margin: 0 auto 32px;">
-                AnyVideo is a <strong style="color: #f5f5f5;">desktop app</strong> — downloads happen on your computer, not on a server. To start downloading videos from YouTube, Instagram, TikTok and 10+ platforms, download the free app below.
-            </p>
-
-            <!-- Steps -->
-            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 36px;">
-                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 20px; font-size: .88rem; font-weight: 600;">
-                    <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(245,158,11,.15); color: #f59e0b; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; flex-shrink: 0;">1</span>
-                    Download the app
+<!-- App Preview (UI only — downloads require the desktop app) -->
+<section class="preview-section" id="try-online">
+    <div class="preview-wrapper">
+        <div class="preview-inner">
+            <div class="preview-titlebar">
+                <div class="dot dot-r"></div>
+                <div class="dot dot-y"></div>
+                <div class="dot dot-g"></div>
+                <span class="title">AnyVideo — Universal Video Downloader</span>
+            </div>
+            <div class="preview-tabs">
+                <button class="preview-tab active" data-panel="single">⬇ Single Download</button>
+                <button class="preview-tab" data-panel="bulk">📦 Bulk Download</button>
+                <button class="preview-tab" data-panel="downloads">📂 My Downloads</button>
+            </div>
+            <!-- Single Download -->
+            <div id="panel-single" class="preview-panel active">
+                <div class="fake-input">
+                    <input id="dl-url" class="fake-url" type="url" placeholder="Paste video URL here… (YouTube, Instagram, TikTok, etc.)" spellcheck="false" autocomplete="off" />
+                    <button id="dl-btn" class="fake-btn" onclick="showAppRequired()">⬇ Download</button>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 20px; font-size: .88rem; font-weight: 600;">
-                    <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(245,158,11,.15); color: #f59e0b; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; flex-shrink: 0;">2</span>
-                    Install &amp; open it
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 20px; font-size: .88rem; font-weight: 600;">
-                    <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(245,158,11,.15); color: #f59e0b; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; flex-shrink: 0;">3</span>
-                    Paste any video URL
+                <div id="dl-status" style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:500;line-height:1.6;display:none;border-left:3px solid;"></div>
+                <div class="fake-platforms">
+                    <div class="fake-badge">▶ YouTube</div>
+                    <div class="fake-badge">📷 Instagram</div>
+                    <div class="fake-badge">🎵 TikTok</div>
+                    <div class="fake-badge">🐦 Twitter/X</div>
+                    <div class="fake-badge">📘 Facebook</div>
+                    <div class="fake-badge">🤖 Reddit</div>
+                    <div class="fake-badge">🎮 Twitch</div>
+                    <div class="fake-badge">📌 Pinterest</div>
                 </div>
             </div>
-
-            <!-- Download buttons -->
-            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-                <a href="AnyVideo.exe" download id="banner-win-btn" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 700; font-size: .95rem; transition: all .25s; text-decoration: none;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 0 40px rgba(245,158,11,.35)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-                    🖥️ Download for Windows
-                </a>
-                <a href="AnyVideo.dmg" download id="banner-mac-btn" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #f5f5f5; font-weight: 700; font-size: .95rem; transition: all .25s; text-decoration: none;" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform=''">
-                    🍏 Download for macOS
-                </a>
+            <!-- Bulk Download -->
+            <div id="panel-bulk" class="preview-panel">
+                <label style="font-size:.82rem;font-weight:500;color:#a3a3a3;margin-bottom:8px;display:block;">Paste multiple URLs (one per line)</label>
+                <textarea id="bulk-urls" class="fake-url" style="width:100%;min-height:110px;resize:vertical;line-height:1.6;" placeholder="https://youtube.com/watch?v=...&#10;https://instagram.com/reel/...&#10;https://tiktok.com/@user/video/..." spellcheck="false"></textarea>
+                <div style="margin-top:12px;">
+                    <button id="bulk-btn" class="fake-btn" onclick="showAppRequired()" style="width:100%;text-align:center;">📦 Download All</button>
+                </div>
+                <div id="bulk-status" style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:500;line-height:1.6;display:none;border-left:3px solid;"></div>
             </div>
-
-            <!-- Free label -->
-            <p style="margin-top: 20px; font-size: .8rem; color: #525252;">Free · No account needed · Windows &amp; macOS</p>
+            <!-- My Downloads -->
+            <div id="panel-downloads" class="preview-panel">
+                <div class="dl-header">
+                    <h3>Downloaded Files</h3>
+                    <div class="dl-header-btns">
+                        <button class="dl-list-btn" onclick="showAppRequired()">🔄 Refresh</button>
+                        <button class="dl-danger-btn" onclick="showAppRequired()">🗑 Clear All</button>
+                    </div>
+                </div>
+                <div id="downloads-list">
+                    <div class="dl-empty">📂 Download the desktop app to see your files here.</div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -612,8 +623,9 @@
     </div>
 </footer>
 
-<!-- Smooth scroll-reveal animations -->
+<!-- Scripts -->
 <script>
+    // Scroll-reveal animations
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -629,34 +641,42 @@
         el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
         observer.observe(el);
     });
+    document.querySelectorAll('.feature-card').forEach((card, i) => { card.style.transitionDelay = `${i * 0.08}s`; });
+    document.querySelectorAll('.platform-chip').forEach((chip, i) => { chip.style.transitionDelay = `${i * 0.05}s`; });
 
-    // Stagger feature cards
-    document.querySelectorAll('.feature-card').forEach((card, i) => {
-        card.style.transitionDelay = `${i * 0.08}s`;
-    });
-    document.querySelectorAll('.platform-chip').forEach((chip, i) => {
-        chip.style.transitionDelay = `${i * 0.05}s`;
-    });
-
-    // Dropdown toggle logic
-    function toggleDropdown(btn) {
-        btn.parentElement.classList.toggle("show");
-    }
-
-    // Close dropdowns when clicking outside
+    // Dropdown toggle
+    function toggleDropdown(btn) { btn.parentElement.classList.toggle("show"); }
     window.onclick = function(event) {
         if (!event.target.closest('.dropdown')) {
-            var dropdowns = document.getElementsByClassName("dropdown");
-            for (var i = 0; i < dropdowns.length; i++) {
-                if (dropdowns[i].classList.contains('show')) {
-                    dropdowns[i].classList.remove('show');
-                }
-            }
+            document.getElementsByClassName("dropdown") && Array.from(document.getElementsByClassName("dropdown")).forEach(d => d.classList.remove('show'));
+        }
+    }
+
+    // Preview tabs
+    document.querySelectorAll('.preview-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.preview-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+        });
+    });
+
+    // Show "download the app" message when user tries to use the downloader
+    function showAppRequired() {
+        const statusEls = ['dl-status', 'bulk-status'];
+        const activePanel = document.querySelector('.preview-panel.active');
+        const statusEl = activePanel ? activePanel.querySelector('[id$="-status"]') : document.getElementById('dl-status');
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = 'rgba(245,158,11,.08)';
+            statusEl.style.borderColor = '#f59e0b';
+            statusEl.style.color = '#fde68a';
+            statusEl.innerHTML = '📥 <strong>Download the desktop app</strong> to use this feature. <a href="#download" style="color:#f59e0b;text-decoration:underline;">Get it free →</a>';
         }
     }
 </script>
 
 </body>
 </html>
-
 
