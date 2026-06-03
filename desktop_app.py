@@ -27,13 +27,19 @@ else:
 DOWNLOAD_DIR = os.path.join(BASE_DIR, 'downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# Try to locate ffmpeg
+# Try to locate ffmpeg (cross-platform)
 FFMPEG_PATH = None
-for candidate in [
-    os.path.expanduser('~/AppData/Local/Microsoft/WinGet/Links'),
+_ffmpeg_candidates = [
     os.path.join(BASE_DIR, 'ffmpeg'),
     '',  # rely on PATH
-]:
+]
+if platform.system() == 'Windows':
+    _ffmpeg_candidates.insert(0, os.path.expanduser('~/AppData/Local/Microsoft/WinGet/Links'))
+elif platform.system() == 'Darwin':
+    _ffmpeg_candidates.insert(0, '/opt/homebrew/bin')  # Apple Silicon Homebrew
+    _ffmpeg_candidates.insert(1, '/usr/local/bin')     # Intel Homebrew
+
+for candidate in _ffmpeg_candidates:
     if candidate == '' or os.path.isdir(candidate):
         FFMPEG_PATH = candidate if candidate else None
         break
@@ -229,7 +235,13 @@ COLORS = {
     'border':         '#2E2E2E',
 }
 
-FONT_FAMILY = 'Segoe UI'
+# Cross-platform font selection
+if platform.system() == 'Darwin':
+    FONT_FAMILY = 'SF Pro Display'
+elif platform.system() == 'Windows':
+    FONT_FAMILY = 'Segoe UI'
+else:
+    FONT_FAMILY = 'Ubuntu'
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
