@@ -436,7 +436,7 @@
     <div class="container">
         <div class="logo">⬇ Any<span>Video</span></div>
         <div class="nav-links">
-            <a href="#try-online">Try Online</a>
+            <a href="#download">Get the App</a>
             <a href="#features">Features</a>
             <a href="#platforms">Platforms</a>
             <a href="#download" class="nav-cta">Download Free</a>
@@ -472,90 +472,50 @@
     </div>
 </section>
 
-<!-- Working Downloader -->
-<section class="preview-section" id="try-online">
-    <div class="preview-wrapper">
-        <div class="preview-inner">
-            <div class="preview-titlebar">
-                <div class="dot dot-r"></div>
-                <div class="dot dot-y"></div>
-                <div class="dot dot-g"></div>
-                <span class="title">AnyVideo — Universal Video Downloader</span>
-            </div>
-            <div class="preview-tabs">
-                <button class="preview-tab active" data-panel="single">⬇ Single Download</button>
-                <button class="preview-tab" data-panel="bulk">📦 Bulk Download</button>
-                <button class="preview-tab" data-panel="downloads">📂 My Downloads</button>
-            </div>
-            <!-- Single Download -->
-            <div id="panel-single" class="preview-panel active">
-                <div class="fake-input">
-                    <input id="dl-url" class="fake-url" type="url" placeholder="Paste video URL here… (YouTube, Instagram, TikTok, etc.)" spellcheck="false" autocomplete="off" />
-                    <button id="dl-btn" class="fake-btn" onclick="doDownload()">⬇ Download</button>
+<!-- App Required Banner -->
+<section class="preview-section" id="try-online" style="padding: 0 24px 100px;">
+    <div class="preview-wrapper" style="max-width: 700px; margin: 0 auto;">
+        <div class="preview-inner" style="padding: 56px 40px; text-align: center;">
+
+            <!-- Icon -->
+            <div style="width: 80px; height: 80px; border-radius: 22px; background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(239,68,68,.1)); border: 1px solid rgba(245,158,11,.25); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin: 0 auto 28px;">⬇</div>
+
+            <!-- Heading -->
+            <h2 style="font-size: 1.7rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 14px;">This is a showcase website</h2>
+
+            <!-- Subtext -->
+            <p style="color: #a3a3a3; font-size: 1rem; line-height: 1.7; max-width: 480px; margin: 0 auto 32px;">
+                AnyVideo is a <strong style="color: #f5f5f5;">desktop app</strong> — downloads happen on your computer, not on a server. To start downloading videos from YouTube, Instagram, TikTok and 10+ platforms, download the free app below.
+            </p>
+
+            <!-- Steps -->
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 36px;">
+                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 20px; font-size: .88rem; font-weight: 600;">
+                    <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(245,158,11,.15); color: #f59e0b; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; flex-shrink: 0;">1</span>
+                    Download the app
                 </div>
-                <div id="dl-detected" style="margin-top:12px;padding:5px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:100px;font-size:.78rem;color:#f59e0b;font-weight:600;display:none;width:fit-content;"></div>
-                <div id="dl-status" style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:500;line-height:1.6;display:none;border-left:3px solid;"></div>
-                
-                <!-- Single Progress Bar -->
-                <div id="single-progress" class="progress-wrap">
-                    <div class="progress-header">
-                        <span id="single-status-text">⏳ Starting...</span>
-                        <span id="single-pct">0%</span>
-                    </div>
-                    <div class="progress-track">
-                        <div id="single-fill" class="progress-fill"></div>
-                    </div>
-                    <div class="progress-meta">
-                        <span id="single-speed">-- MiB/s</span>
-                        <span id="single-eta">--:--</span>
-                    </div>
+                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 20px; font-size: .88rem; font-weight: 600;">
+                    <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(245,158,11,.15); color: #f59e0b; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; flex-shrink: 0;">2</span>
+                    Install &amp; open it
                 </div>
-                <div class="fake-platforms">
-                    <div class="fake-badge">▶ YouTube</div>
-                    <div class="fake-badge">📷 Instagram</div>
-                    <div class="fake-badge">🎵 TikTok</div>
-                    <div class="fake-badge">🐦 Twitter/X</div>
-                    <div class="fake-badge">📘 Facebook</div>
-                    <div class="fake-badge">🤖 Reddit</div>
-                    <div class="fake-badge">🎮 Twitch</div>
-                    <div class="fake-badge">📌 Pinterest</div>
+                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 20px; font-size: .88rem; font-weight: 600;">
+                    <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(245,158,11,.15); color: #f59e0b; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; flex-shrink: 0;">3</span>
+                    Paste any video URL
                 </div>
             </div>
-            <!-- Bulk Download -->
-            <div id="panel-bulk" class="preview-panel">
-                <label style="font-size:.82rem;font-weight:500;color:#a3a3a3;margin-bottom:8px;display:block;">Paste multiple URLs (one per line)</label>
-                <textarea id="bulk-urls" class="fake-url" style="width:100%;min-height:110px;resize:vertical;line-height:1.6;" placeholder="https://youtube.com/watch?v=...&#10;https://instagram.com/reel/...&#10;https://tiktok.com/@user/video/..." spellcheck="false"></textarea>
-                <div style="margin-top:12px;">
-                    <button id="bulk-btn" class="fake-btn" onclick="doBulkDownload()" style="width:100%;text-align:center;">📦 Download All</button>
-                </div>
-                <div id="bulk-status" style="margin-top:14px;padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:500;line-height:1.6;display:none;border-left:3px solid;"></div>
-                
-                <!-- Bulk Progress Bar -->
-                <div id="bulk-progress" class="progress-wrap">
-                    <div class="progress-header">
-                        <span id="bulk-status-text">⏳ Starting...</span>
-                        <span id="bulk-pct">0%</span>
-                    </div>
-                    <div class="progress-track">
-                        <div id="bulk-fill" class="progress-fill"></div>
-                    </div>
-                    <div class="progress-meta">
-                        <span id="bulk-speed">-- MiB/s</span>
-                        <span id="bulk-eta">--:--</span>
-                    </div>
-                </div>
+
+            <!-- Download buttons -->
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <a href="AnyVideo.exe" download id="banner-win-btn" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 700; font-size: .95rem; transition: all .25s; text-decoration: none;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 0 40px rgba(245,158,11,.35)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    🖥️ Download for Windows
+                </a>
+                <a href="AnyVideo.dmg" download id="banner-mac-btn" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #f5f5f5; font-weight: 700; font-size: .95rem; transition: all .25s; text-decoration: none;" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform=''">
+                    🍏 Download for macOS
+                </a>
             </div>
-            <!-- My Downloads -->
-            <div id="panel-downloads" class="preview-panel">
-                <div class="dl-header">
-                    <h3>Downloaded Files</h3>
-                    <div class="dl-header-btns">
-                        <button class="dl-list-btn" onclick="refreshDownloads()">🔄 Refresh</button>
-                        <button class="dl-danger-btn" onclick="clearDownloads()">🗑 Clear All</button>
-                    </div>
-                </div>
-                <div id="downloads-list"><div class="dl-empty">📂 No downloads yet. Paste a URL to get started.</div></div>
-            </div>
+
+            <!-- Free label -->
+            <p style="margin-top: 20px; font-size: .8rem; color: #525252;">Free · No account needed · Windows &amp; macOS</p>
         </div>
     </div>
 </section>
@@ -655,14 +615,6 @@
 
 <!-- Smooth scroll-reveal animations -->
 <script>
-
-    /* ---- API Base URL ----
-       Use same-origin relative paths everywhere.
-       - Local Flask: requests stay on localhost.
-       - Netlify: redirects in netlify.toml proxy these routes to the backend.
-    */
-    const API_BASE = '';
-
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -703,216 +655,9 @@
             }
         }
     }
-
-    /* ---- Preview Tabs ---- */
-    document.querySelectorAll('.preview-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.preview-panel').forEach(p => p.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
-            if (tab.dataset.panel === 'downloads') refreshDownloads();
-        });
-    });
-
-    /* ---- Platform Detection ---- */
-    const platformMap = {
-        'youtube.com':'YouTube','youtu.be':'YouTube','instagram.com':'Instagram',
-        'tiktok.com':'TikTok','twitter.com':'X / Twitter','x.com':'X / Twitter',
-        'facebook.com':'Facebook','fb.watch':'Facebook','reddit.com':'Reddit',
-        'twitch.tv':'Twitch','pinterest.com':'Pinterest','linkedin.com':'LinkedIn'
-    };
-    const dlInput = document.getElementById('dl-url');
-    const dlDetected = document.getElementById('dl-detected');
-    dlInput.addEventListener('input', function() {
-        const url = this.value.toLowerCase();
-        const match = Object.keys(platformMap).find(k => url.includes(k));
-        if (match && url.trim()) {
-            dlDetected.textContent = '✓ Detected: ' + platformMap[match];
-            dlDetected.style.display = 'inline-block';
-        } else { dlDetected.style.display = 'none'; }
-    });
-    dlInput.addEventListener('keydown', e => { if (e.key === 'Enter') doDownload(); });
-
-    /* ---- Toast notification ---- */
-    function toast(msg, type = 'info', ms = 3500) {
-        const el = document.createElement('div');
-        el.className = 'toast-bar ' + type;
-        el.textContent = msg;
-        el.onclick = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
-        document.body.appendChild(el);
-        setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, ms);
-    }
-
-    /* ---- Status helper ---- */
-    function showStatus(el, msg, type) {
-        el.style.display = 'block';
-        el.innerHTML = msg;
-        const colors = { success:['rgba(34,197,94,.08)','#22c55e','#86efac'], error:['rgba(239,68,68,.08)','#ef4444','#fca5a5'], loading:['rgba(245,158,11,.08)','#f59e0b','#fde68a'] };
-        const c = colors[type] || colors.loading;
-        el.style.background = c[0]; el.style.borderColor = c[1]; el.style.color = c[2];
-    }
-
-    /* ---- Single Download ---- */
-    let currentEventSource = null;
-    function startProgressStream(prefix) {
-        if (currentEventSource) currentEventSource.close();
-        const clientId = 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
-        const wrap = document.getElementById(prefix + '-progress');
-        const statusText = document.getElementById(prefix + '-status-text');
-        const pct = document.getElementById(prefix + '-pct');
-        const fill = document.getElementById(prefix + '-fill');
-        const speed = document.getElementById(prefix + '-speed');
-        const eta = document.getElementById(prefix + '-eta');
-        
-        wrap.classList.add('visible');
-        statusText.textContent = '⏳ Starting...';
-        pct.textContent = '0%';
-        fill.style.width = '0%';
-        speed.textContent = '-- MiB/s';
-        eta.textContent = '--:--';
-        
-        currentEventSource = new EventSource(API_BASE + '/stream-progress?client_id=' + clientId);
-        currentEventSource.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            if (data.status === 'downloading') {
-                statusText.textContent = '⬇ Downloading ' + (data.filename || '...');
-                pct.textContent = data.percent;
-                fill.style.width = data.percent;
-                speed.textContent = data.speed;
-                eta.textContent = data.eta;
-            } else if (data.status === 'processing') {
-                statusText.textContent = '⚙️ Processing...';
-                pct.textContent = '100%';
-                fill.style.width = '100%';
-                speed.textContent = 'Done';
-                eta.textContent = '00:00';
-            }
-        };
-        currentEventSource.onerror = function() {
-            currentEventSource.close();
-        };
-        
-        return clientId;
-    }
-
-    function stopProgressStream(prefix) {
-        if (currentEventSource) {
-            currentEventSource.close();
-            currentEventSource = null;
-        }
-        document.getElementById(prefix + '-progress').classList.remove('visible');
-    }
-
-    /* ---- Single Download ---- */
-    async function doDownload() {
-        const url = dlInput.value.trim();
-        const status = document.getElementById('dl-status');
-        const btn = document.getElementById('dl-btn');
-        if (!url) { showStatus(status, 'Please paste a video URL first.', 'error'); toast('Please enter a URL','error'); return; }
-
-        const clientId = startProgressStream('single');
-        btn.disabled = true; btn.textContent = '⏳ Downloading...';
-        status.style.display = 'none'; // hide generic status while showing progress bar
-        
-        try {
-            const res = await fetch(API_BASE + '/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, client_id: clientId}) });
-            if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
-            const data = await res.json();
-            if (data.status === 'success') {
-                let msg = '✅ ' + data.message;
-                if (data.title) msg += '<br>📹 ' + data.title;
-                if (data.uploader) msg += '<br>👤 ' + data.uploader;
-                showStatus(status, msg, 'success');
-                toast('Download complete! ✅','success');
-                dlInput.value = ''; dlDetected.style.display = 'none';
-            } else {
-                showStatus(status, '❌ ' + data.message, 'error');
-                toast('Download failed','error');
-            }
-        } catch(e) {
-            console.error(e);
-            showStatus(status, '❌ Could not connect to server. Run <strong>python app.py</strong> and visit <strong>http://localhost:5000</strong>', 'error');
-            toast('Server not running','error');
-        }
-        finally { 
-            stopProgressStream('single');
-            btn.disabled = false; 
-            btn.textContent = '⬇ Download'; 
-        }
-    }
-
-    /* ---- Bulk Download ---- */
-    async function doBulkDownload() {
-        const textarea = document.getElementById('bulk-urls');
-        const urls = textarea.value.trim().split('\n').filter(u => u.trim());
-        const status = document.getElementById('bulk-status');
-        const btn = document.getElementById('bulk-btn');
-        if (!urls.length) { showStatus(status, 'Please enter at least one URL.', 'error'); toast('Enter URLs first','error'); return; }
-
-        const clientId = startProgressStream('bulk');
-        btn.disabled = true; btn.textContent = '⏳ Processing ' + urls.length + ' URLs...';
-        status.style.display = 'none'; // hide generic status
-        
-        try {
-            const res = await fetch(API_BASE + '/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls, client_id: clientId}) });
-            if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
-            const data = await res.json();
-            if (data.status === 'success') {
-                let msg = '✅ ' + data.message + '<br><br>';
-                data.results.forEach((r,i) => { msg += (r.status==='success'?'✅':'❌') + ' URL '+(i+1)+': '+r.message+'<br>'; });
-                showStatus(status, msg, 'success');
-                toast(data.results.length + ' URLs processed! ✅','success');
-                textarea.value = '';
-            } else { showStatus(status, '❌ ' + data.message, 'error'); toast('Bulk download failed','error'); }
-        } catch(e) {
-            console.error(e);
-            showStatus(status, '❌ Could not connect to server. Run <strong>python app.py</strong> locally.', 'error');
-            toast('Server not running','error');
-        }
-        finally { 
-            stopProgressStream('bulk');
-            btn.disabled = false; 
-            btn.textContent = '📦 Download All'; 
-        }
-    }
-
-    /* ---- Downloads List ---- */
-    async function refreshDownloads() {
-        const list = document.getElementById('downloads-list');
-        list.innerHTML = '<div class="dl-empty" style="color:#fde68a;">🔄 Loading...</div>';
-        try {
-            const res = await fetch(API_BASE + '/downloads');
-            const data = await res.json();
-            if (data.items && data.items.length > 0) {
-                let html = '';
-                data.items.forEach(item => {
-                    const isFile = item.type === 'file';
-                    const meta = isFile ? formatSize(item.size) : item.file_count + ' file' + (item.file_count!==1?'s':'');
-                    const action = isFile ? "window.open('"+API_BASE+"/download-file/"+encodeURIComponent(item.name)+"')" : "window.open('"+API_BASE+"/download-folder/"+encodeURIComponent(item.name)+"')";
-                    const btnLabel = isFile ? '⬇ Download' : '📦 ZIP';
-                    html += '<div class="dl-list-item"><div class="dl-list-icon '+(isFile?'file':'folder')+'">'+(isFile?'📄':'📁')+'</div><div style="flex:1;min-width:0;"><div class="dl-list-name" title="'+item.name+'">'+item.name+'</div><div class="dl-list-meta">'+meta+'</div></div><button class="dl-list-btn" onclick="'+action+'">'+btnLabel+'</button></div>';
-                });
-                list.innerHTML = html;
-            } else { list.innerHTML = '<div class="dl-empty">📂 No downloads yet. Paste a URL to get started.</div>'; }
-        } catch(e) { list.innerHTML = '<div class="dl-empty" style="color:#fca5a5;">❌ Could not load downloads. Is the server running?</div>'; }
-    }
-    async function clearDownloads() {
-        if (!confirm('Delete all downloaded files?')) return;
-        try {
-            const res = await fetch(API_BASE + '/clear-downloads', { method:'POST', headers:{'Content-Type':'application/json'} });
-            const data = await res.json();
-            if (data.status === 'success') { refreshDownloads(); toast('Downloads cleared','success'); }
-        } catch(e) { toast('Error clearing downloads','error'); }
-    }
-    function formatSize(bytes) {
-        if (!bytes) return '0 B';
-        const k = 1024, s = ['B','KB','MB','GB'];
-        const i = Math.floor(Math.log(bytes)/Math.log(k));
-        return parseFloat((bytes/Math.pow(k,i)).toFixed(1)) + ' ' + s[i];
-    }
 </script>
 
 </body>
 </html>
+
+
