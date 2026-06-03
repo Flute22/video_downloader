@@ -556,16 +556,6 @@
                 </div>
                 <div id="downloads-list"><div class="dl-empty">📂 No downloads yet. Paste a URL to get started.</div></div>
             </div>
-            <!-- Advanced Options -->
-            <div style="padding: 0 28px 24px 28px; border-top: 1px solid rgba(255,255,255,.06); margin-top: 4px; padding-top: 20px;">
-                <details style="cursor: pointer; font-size: 0.82rem; color: #a3a3a3;">
-                    <summary style="font-weight: 600; outline: none; margin-bottom: 8px; user-select: none; color: #f5f5f5;">Advanced Settings (Authentication)</summary>
-                    <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-                        <label for="yt-cookies" style="font-size: 0.75rem; font-weight: 500; color: #737373;">YouTube Cookies (Netscape format)</label>
-                        <textarea id="yt-cookies" class="fake-url" style="min-height: 80px; font-family: monospace; font-size: 0.78rem; padding: 10px 14px; width: 100%; border-radius: 8px;" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	...&#10;&#10;Optional: Paste cookies to bypass bot protection on cloud deployments like Render." spellcheck="false"></textarea>
-                    </div>
-                </details>
-            </div>
         </div>
     </div>
 </section>
@@ -665,16 +655,6 @@
 
 <!-- Smooth scroll-reveal animations -->
 <script>
-    // Load YouTube cookies from localStorage on startup
-    document.addEventListener('DOMContentLoaded', () => {
-        const ytCookies = document.getElementById('yt-cookies');
-        if (ytCookies) {
-            ytCookies.value = localStorage.getItem('anyvideo_yt_cookies') || '';
-            ytCookies.addEventListener('input', (e) => {
-                localStorage.setItem('anyvideo_yt_cookies', e.target.value);
-            });
-        }
-    });
 
     /* ---- API Base URL ----
        Use same-origin relative paths everywhere.
@@ -837,9 +817,7 @@
         status.style.display = 'none'; // hide generic status while showing progress bar
         
         try {
-            const cookiesEl = document.getElementById('yt-cookies');
-            const cookies = cookiesEl ? cookiesEl.value.trim() : '';
-            const res = await fetch(API_BASE + '/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, client_id: clientId, cookies}) });
+            const res = await fetch(API_BASE + '/download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, client_id: clientId}) });
             if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
             const data = await res.json();
             if (data.status === 'success') {
@@ -878,9 +856,7 @@
         status.style.display = 'none'; // hide generic status
         
         try {
-            const cookiesEl = document.getElementById('yt-cookies');
-            const cookies = cookiesEl ? cookiesEl.value.trim() : '';
-            const res = await fetch(API_BASE + '/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls, client_id: clientId, cookies}) });
+            const res = await fetch(API_BASE + '/bulk-download', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urls, client_id: clientId}) });
             if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
             const data = await res.json();
             if (data.status === 'success') {

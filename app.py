@@ -30,6 +30,23 @@ else:
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
+# Server-side cookies file for bypassing YouTube bot checks
+if IS_RENDER:
+    SERVER_COOKIES_PATH = os.path.join(tempfile.gettempdir(), 'anyvideo_cookies.txt')
+else:
+    SERVER_COOKIES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
+
+# Check if cookies are provided via Environment Variable (e.g. on Render)
+ENV_COOKIES = os.environ.get('YOUTUBE_COOKIES', '').strip()
+if ENV_COOKIES:
+    try:
+        with open(SERVER_COOKIES_PATH, 'w', encoding='utf-8') as f:
+            # Handle both literal newlines and actual newlines
+            f.write(ENV_COOKIES.replace('\\n', '\n'))
+        print("Loaded YouTube cookies from environment variable.")
+    except Exception as e:
+        print(f"Failed to write environment cookies: {e}")
+
 # Optional Proxy
 PROXY_URL = os.environ.get('PROXY_URL', '')
 
@@ -498,26 +515,16 @@ def stream_progress():
 @app.route('/download', methods=['POST'])
 def download():
     """Handle download requests"""
-    temp_cookies_file = None
     try:
         data = request.get_json()
         url = data.get('url', '').strip()
         client_id = data.get('client_id')
-        cookies = data.get('cookies', '').strip()
         
         if not url:
             return jsonify({'status': 'error', 'message': 'URL is required'})
             
-        cookies_path = None
-        if cookies:
-            try:
-                temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', encoding='utf-8')
-                temp_file.write(cookies)
-                temp_file.close()
-                cookies_path = temp_file.name
-                temp_cookies_file = temp_file.name
-            except Exception as e:
-                print(f"Error writing temp cookies: {e}")
+        cookies_path = SERVER_COOKIES_PATH if os.path.exists(SERVER_COOKIES_PATH) else None
+        print(f"Debug: Using cookies_path = {cookies_path}")
         
         # Detect platform automatically
         platform = downloader.detect_platform(url)
@@ -534,36 +541,19 @@ def download():
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Server error: {str(e)}'})
-    finally:
-        if temp_cookies_file and os.path.exists(temp_cookies_file):
-            try:
-                os.unlink(temp_cookies_file)
-            except Exception:
-                pass
 
 @app.route('/bulk-download', methods=['POST'])
 def bulk_download():
     """Handle bulk download requests"""
-    temp_cookies_file = None
     try:
         data = request.get_json()
         urls = data.get('urls', [])
         client_id = data.get('client_id')
-        cookies = data.get('cookies', '').strip()
         
         if not urls:
             return jsonify({'status': 'error', 'message': 'URLs list is required'})
             
-        cookies_path = None
-        if cookies:
-            try:
-                temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', encoding='utf-8')
-                temp_file.write(cookies)
-                temp_file.close()
-                cookies_path = temp_file.name
-                temp_cookies_file = temp_file.name
-            except Exception as e:
-                print(f"Error writing temp cookies: {e}")
+        cookies_path = SERVER_COOKIES_PATH if os.path.exists(SERVER_COOKIES_PATH) else None
         
         results = []
         for i, url in enumerate(urls):
@@ -591,12 +581,6 @@ def bulk_download():
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Bulk download error: {str(e)}'})
-    finally:
-        if temp_cookies_file and os.path.exists(temp_cookies_file):
-            try:
-                os.unlink(temp_cookies_file)
-            except Exception:
-                pass
 
 @app.route('/downloads')
 def list_downloads():

@@ -683,16 +683,6 @@
                     <div id="downloads-list"></div>
                 </div>
             </div>
-            <!-- Advanced Options -->
-            <div style="padding: 0 1.5rem 1.25rem 1.5rem; border-top: 1px solid var(--border); margin-top: -0.5rem; padding-top: 1rem;">
-                <details style="cursor: pointer; font-size: 0.8125rem; color: var(--text-secondary);">
-                    <summary style="font-weight: 600; outline: none; margin-bottom: 0.5rem; user-select: none;">Advanced Settings (Authentication)</summary>
-                    <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label for="yt-cookies" style="font-size: 0.75rem; font-weight: 500; color: var(--text-muted);">YouTube Cookies (Netscape format)</label>
-                        <textarea id="yt-cookies" class="input" style="min-height: 80px; font-family: monospace; font-size: 0.75rem;" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	...&#10;&#10;Optional: Paste cookies to bypass bot protection on cloud deployments like Render." spellcheck="false"></textarea>
-                    </div>
-                </details>
-            </div>
         </div>
 
         <!-- Features -->
@@ -751,16 +741,6 @@
     </div>
 
     <script>
-        // Load YouTube cookies from localStorage on startup
-        document.addEventListener('DOMContentLoaded', () => {
-            const ytCookies = document.getElementById('yt-cookies');
-            if (ytCookies) {
-                ytCookies.value = localStorage.getItem('anyvideo_yt_cookies') || '';
-                ytCookies.addEventListener('input', (e) => {
-                    localStorage.setItem('anyvideo_yt_cookies', e.target.value);
-                });
-            }
-        });
 
         /* ---- Tabs ---- */
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -872,12 +852,10 @@
             startProgress();
 
             try {
-                const cookiesEl = document.getElementById('yt-cookies');
-                const cookies = cookiesEl ? cookiesEl.value.trim() : '';
                 const res = await fetch('/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, cookies })
+                    body: JSON.stringify({ url })
                 });
                 if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
                 const data = await res.json();
@@ -932,12 +910,10 @@
             statusDiv.innerHTML = '';
 
             try {
-                const cookiesEl = document.getElementById('yt-cookies');
-                const cookies = cookiesEl ? cookiesEl.value.trim() : '';
                 const res = await fetch('/bulk-download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ urls, cookies })
+                    body: JSON.stringify({ urls })
                 });
                 if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
                 const data = await res.json();
