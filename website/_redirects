@@ -1,0 +1,8 @@
+/download https://anyvideo-backend.onrender.com/download 200
+/bulk-download https://anyvideo-backend.onrender.com/bulk-download 200
+/downloads https://anyvideo-backend.onrender.com/downloads 200
+/download-file/* https://anyvideo-backend.onrender.com/download-file/:splat 200
+/download-folder/* https://anyvideo-backend.onrender.com/download-folder/:splat 200
+/clear-downloads https://anyvideo-backend.onrender.com/clear-downloads 200
+/supported-platforms https://anyvideo-backend.onrender.com/supported-platforms 200
+/health https://anyvideo-backend.onrender.com/health 200
