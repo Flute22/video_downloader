@@ -340,6 +340,11 @@ def index():
     """Main page - serves the website landing page with working downloader"""
     return send_from_directory('website', 'index.html')
 
+@app.route('/<path:filename>')
+def website_static(filename):
+    """Serve static files from the website directory (e.g. .exe, .dmg downloads)"""
+    return send_from_directory('website', filename)
+
 @app.route('/app')
 def app_ui():
     """Full app UI page"""

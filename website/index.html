@@ -585,10 +585,12 @@
 
 <!-- Smooth scroll-reveal animations -->
 <script>
-    /* ---- API Base URL: auto-detect local vs deployed ---- */
-    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-        ? ''  /* local Flask — relative URLs */
-        : 'https://anyvideo-backend.onrender.com';  /* ← Replace with your Render URL */
+    /* ---- API Base URL ----
+       Use same-origin relative paths everywhere.
+       - Local Flask: requests stay on localhost.
+       - Netlify: redirects in netlify.toml proxy these routes to the backend.
+    */
+    const API_BASE = '';
 
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
