@@ -220,13 +220,13 @@ class UniversalDownloader:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 COLORS = {
-    'bg_dark':        '#0F0F0F',
-    'bg_card':        '#1A1A1A',
+    'bg_dark':        '#050505',
+    'bg_card':        '#111111',
     'bg_input':       '#242424',
-    'bg_hover':       '#2A2A2A',
+    'bg_hover':       '#1A1A1A',
     'accent':         '#F59E0B',      # amber-500
     'accent_hover':   '#D97706',      # amber-600
-    'accent_dim':     '#78350F',      # amber-900
+    'accent_dim':     '#452908',
     'text_primary':   '#F5F5F5',
     'text_secondary': '#A3A3A3',
     'text_muted':     '#525252',
@@ -395,15 +395,25 @@ class AnyVideoApp(ctk.CTk):
         )
         # hidden initially
 
-        # ── progress bar
+        # ── progress bar wrapper
+        self.progress_frame = ctk.CTkFrame(inner, fg_color='transparent')
+        # hidden initially
+
+        self.progress_label = ctk.CTkLabel(
+            self.progress_frame, text='Downloading... 0%',
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight='bold'),
+            text_color=COLORS['accent'],
+        )
+        self.progress_label.pack(anchor='w', pady=(0, 6))
+
         self.progress_bar = ctk.CTkProgressBar(
-            inner,
+            self.progress_frame,
             fg_color=COLORS['bg_input'],
             progress_color=COLORS['accent'],
-            height=6, corner_radius=3,
+            height=8, corner_radius=4, mode='determinate'
         )
         self.progress_bar.set(0)
-        # hidden initially
+        self.progress_bar.pack(fill='x')
 
         # ── result message area
         self.result_label = ctk.CTkLabel(
@@ -623,13 +633,11 @@ class AnyVideoApp(ctk.CTk):
         self.download_btn.configure(state=btn_state)
         self.bulk_btn.configure(state=btn_state)
         if state:
-            self.progress_bar.pack(fill='x', pady=(14, 0))
+            self.progress_frame.pack(fill='x', pady=(14, 0))
             self.progress_bar.set(0)
-            self.progress_bar.configure(mode='indeterminate')
-            self.progress_bar.start()
+            self.progress_label.configure(text='Starting...')
         else:
-            self.progress_bar.stop()
-            self.progress_bar.pack_forget()
+            self.progress_frame.pack_forget()
 
     def _set_status(self, text: str, color: str = COLORS['text_muted']):
         self.status_label.configure(text=text, text_color=color)
@@ -641,11 +649,24 @@ class AnyVideoApp(ctk.CTk):
 
     def _progress_hook(self, d):
         if d.get('status') == 'downloading':
-            pct = d.get('_percent_str', '').strip()
+            pct_str = d.get('_percent_str', '').strip()
             speed = d.get('_speed_str', '').strip()
-            self._set_status(f'Downloading… {pct}  ({speed})', COLORS['accent'])
+            # Clean ansi escape codes yt-dlp might add
+            clean_pct = re.sub(r'\x1b\[[0-9;]*m', '', pct_str)
+            clean_pct = clean_pct.replace('%', '').strip()
+            try:
+                pct_val = float(clean_pct) / 100.0
+                self.after(0, lambda: self.progress_bar.set(pct_val))
+            except Exception:
+                pass
+            
+            label_text = f'Downloading... {pct_str}  ({speed})'
+            self.after(0, lambda: self.progress_label.configure(text=label_text))
+            self.after(0, lambda: self._set_status(f'Downloading… {pct_str}', COLORS['accent']))
         elif d.get('status') == 'finished':
-            self._set_status('Merging / finalising…', COLORS['accent'])
+            self.after(0, lambda: self.progress_label.configure(text='Merging / finalising...'))
+            self.after(0, lambda: self.progress_bar.set(1.0))
+            self.after(0, lambda: self._set_status('Merging / finalising…', COLORS['accent']))
 
     def _start_single_download(self):
         url = self.url_entry.get().strip()
