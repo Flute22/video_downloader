@@ -73,6 +73,18 @@ class UniversalDownloader:
         if len(filename) > max_length:
             filename = filename[:max_length]
         return filename
+
+    def validate_ydl_result(self, info, platform_name):
+        """Normalize yt-dlp failures into a user-facing error."""
+        if info is None:
+            return {
+                'status': 'error',
+                'message': (
+                    f'{platform_name} download failed. The server could not extract media details '
+                    'from this URL. Please try another video or try again later.'
+                )
+            }
+        return None
     
     def download_youtube_content(self, url, path):
         """Download YouTube videos, shorts, playlists"""
@@ -87,8 +99,11 @@ class UniversalDownloader:
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                
-                if 'entries' in info:  # Playlist
+                error_result = self.validate_ydl_result(info, 'YouTube')
+                if error_result:
+                    return error_result
+
+                if isinstance(info, dict) and 'entries' in info:  # Playlist
                     titles = [entry.get('title', 'Unknown') for entry in info['entries'] if entry]
                     return {
                         'status': 'success',
@@ -186,6 +201,9 @@ class UniversalDownloader:
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
+                error_result = self.validate_ydl_result(info, 'TikTok')
+                if error_result:
+                    return error_result
                 return {
                     'status': 'success',
                     'message': 'TikTok video downloaded successfully!',
@@ -208,6 +226,9 @@ class UniversalDownloader:
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
+                error_result = self.validate_ydl_result(info, 'Twitter/X')
+                if error_result:
+                    return error_result
                 return {
                     'status': 'success',
                     'message': 'Twitter content downloaded successfully!',
@@ -230,6 +251,9 @@ class UniversalDownloader:
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
+                error_result = self.validate_ydl_result(info, 'Facebook')
+                if error_result:
+                    return error_result
                 return {
                     'status': 'success',
                     'message': 'Facebook content downloaded successfully!',
@@ -251,6 +275,9 @@ class UniversalDownloader:
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
+                error_result = self.validate_ydl_result(info, 'Reddit')
+                if error_result:
+                    return error_result
                 return {
                     'status': 'success',
                     'message': 'Reddit content downloaded successfully!',
@@ -272,6 +299,9 @@ class UniversalDownloader:
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
+                error_result = self.validate_ydl_result(info, 'This platform')
+                if error_result:
+                    return error_result
                 return {
                     'status': 'success',
                     'message': 'Content downloaded successfully!',
