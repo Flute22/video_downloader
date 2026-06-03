@@ -9,6 +9,8 @@ jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
@@ -33,19 +35,38 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         npm install -g create-dmg
-        create-dmg dist/MediaGrab.app || echo "create-dmg failed, taking fallback"
-        mv MediaGrab*.dmg dist/MediaGrab.dmg || echo "No DMG found"
+        create-dmg dist/AnyVideo.app || echo "create-dmg failed, taking fallback"
+        mv AnyVideo*.dmg dist/AnyVideo.dmg || echo "No DMG found"
         
     - name: Upload Windows Artifact
       if: runner.os == 'Windows'
       uses: actions/upload-artifact@v4
       with:
-        name: MediaGrab-Windows
-        path: dist/MediaGrab.exe
+        name: AnyVideo-Windows
+        path: dist/AnyVideo.exe
         
     - name: Upload macOS Artifact
       if: runner.os == 'macOS'
       uses: actions/upload-artifact@v4
       with:
-        name: MediaGrab-macOS
-        path: dist/MediaGrab.dmg
+        name: AnyVideo-macOS
+        path: dist/AnyVideo.dmg
+
+    - name: Commit binary to website folder
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          cp dist/AnyVideo.exe website/AnyVideo.exe
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add website/AnyVideo.exe
+          git commit -m "build: update Windows EXE from GitHub Actions" || echo "No changes to commit"
+          git push || echo "Push failed (check permissions)"
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          cp dist/AnyVideo.dmg website/AnyVideo.dmg
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add website/AnyVideo.dmg
+          git commit -m "build: update macOS DMG from GitHub Actions" || echo "No changes to commit"
+          git push || echo "Push failed (check permissions)"
+        fi
+      shell: bash
