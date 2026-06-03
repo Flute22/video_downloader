@@ -40,10 +40,27 @@ else:
 ENV_COOKIES = os.environ.get('YOUTUBE_COOKIES', '').strip()
 if ENV_COOKIES:
     try:
+        # Handle all possible newline encodings from env vars
+        cookie_text = ENV_COOKIES
+        # If Render stored literal \n (backslash + n), convert to real newlines
+        if '\\n' in cookie_text and '\n' not in cookie_text:
+            cookie_text = cookie_text.replace('\\n', '\n')
+        # Also handle \\t -> real tabs (in case tabs got escaped too)
+        if '\\t' in cookie_text and '\t' not in cookie_text:
+            cookie_text = cookie_text.replace('\\t', '\t')
+        
         with open(SERVER_COOKIES_PATH, 'w', encoding='utf-8') as f:
-            # Handle both literal newlines and actual newlines
-            f.write(ENV_COOKIES.replace('\\n', '\n'))
-        print("Loaded YouTube cookies from environment variable.")
+            f.write(cookie_text)
+        
+        # Debug: verify the file was written correctly
+        with open(SERVER_COOKIES_PATH, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        print(f"Loaded YouTube cookies from environment variable.")
+        print(f"  Cookie file: {SERVER_COOKIES_PATH}")
+        print(f"  Total lines: {len(lines)}")
+        print(f"  First line: {lines[0].strip()[:60] if lines else 'EMPTY'}")
+        print(f"  Has tabs: {any(chr(9) in line for line in lines)}")
+        print(f"  Non-comment lines: {sum(1 for l in lines if l.strip() and not l.startswith('#'))}")
     except Exception as e:
         print(f"Failed to write environment cookies: {e}")
 
