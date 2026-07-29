@@ -150,18 +150,61 @@ class UniversalDownloader:
                 'speed': status_msg,
                 'eta': '...'
             })
+
+    _QUALITY_FORMATS = {
+        'Best Available': [
+            'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc1]+bestaudio/bestvideo+bestaudio[acodec^=mp4a]/bestvideo+bestaudio/best',
+            'bestvideo+bestaudio/best',
+            'best',
+        ],
+        '1080p (Full HD)': [
+            'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=1080][vcodec^=avc1]+bestaudio/bestvideo[height<=1080]+bestaudio[acodec^=mp4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+            'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+            'best',
+        ],
+        '720p (HD)': [
+            'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=720][vcodec^=avc1]+bestaudio/bestvideo[height<=720]+bestaudio[acodec^=mp4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+            'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+            'best',
+        ],
+        '480p': [
+            'bestvideo[height<=480][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=480][vcodec^=avc1]+bestaudio/bestvideo[height<=480]+bestaudio[acodec^=mp4a]/bestvideo[height<=480]+bestaudio/best[height<=480]/best',
+            'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
+            'best',
+        ],
+    }
+
+    def _youtube_subtitle_opts(self):
+        """Download subtitles when available, including auto captions."""
+        return {
+            'writesubtitles': True,
+            'writeautomaticsub': True,
+            'subtitleslangs': ['en', 'en-US', 'hi', 'all'],
+            'subtitlesformat': 'srt/best',
+            'postprocessors': [
+                {'key': 'FFmpegSubtitlesConvertor', 'format': 'srt'}
+            ],
+        }
+
+    @staticmethod
+    def _count_subtitle_files(path):
+        subtitle_exts = {'.srt', '.vtt', '.ass', '.lrc'}
+        total = 0
+        for root, _, files in os.walk(path):
+            for name in files:
+                if os.path.splitext(name)[1].lower() in subtitle_exts:
+                    total += 1
+        return total
     
-    def download_youtube_content(self, url, path, client_id=None, cookies_path=None):
+    def download_youtube_content(self, url, path, client_id=None, cookies_path=None,
+                                 quality='Best Available', subtitles=False):
         """Download YouTube videos, shorts, playlists"""
         import time
         
         # Format strings to try in order of preference (fallback chain)
-        format_attempts = [
-            'bestvideo[height<=1080][vcodec!*=av01]+bestaudio/best[height<=1080]/bestvideo+bestaudio/best',
-            'bestvideo+bestaudio/best',
-            'best',
-            'worstvideo+worstaudio/worst',  # Last resort: get anything
-        ]
+        format_attempts = self._QUALITY_FORMATS.get(
+            quality, self._QUALITY_FORMATS['Best Available']
+        )
         
         last_error = None
         
@@ -209,7 +252,13 @@ class UniversalDownloader:
                     'downloader_args': {
                         'ffmpeg_i': ['-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5']
                     },
+                    # Convert audio to AAC for player compatibility (e.g. Films & TV)
+                    'postprocessor_args': {
+                        'ffmpeg': ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
+                    },
                 }
+                if subtitles:
+                    ydl_opts.update(self._youtube_subtitle_opts())
                 if cookies_path:
                     ydl_opts['cookiefile'] = cookies_path
                     
@@ -228,16 +277,20 @@ class UniversalDownloader:
                     
                     if 'entries' in info:  # Playlist
                         titles = [entry.get('title', 'Unknown') for entry in info['entries'] if entry]
+                        subtitle_count = self._count_subtitle_files(path) if subtitles else 0
+                        subtitle_note = f' Subtitles saved: {subtitle_count}.' if subtitle_count else ''
                         return {
                             'status': 'success',
-                            'message': f'Downloaded {len(titles)} videos from playlist',
+                            'message': f'Downloaded {len(titles)} videos from playlist.{subtitle_note}',
                             'titles': titles[:5],  # Show first 5 titles
                             'type': 'playlist'
                         }
                     else:  # Single video
+                        subtitle_count = self._count_subtitle_files(path) if subtitles else 0
+                        subtitle_note = f' Subtitles saved: {subtitle_count}.' if subtitle_count else ''
                         return {
                             'status': 'success',
-                            'message': 'YouTube content downloaded successfully!',
+                            'message': f'YouTube content downloaded successfully!{subtitle_note}',
                             'title': info.get('title', 'Unknown'),
                             'uploader': info.get('uploader', 'Unknown'),
                             'type': 'video'
@@ -487,7 +540,8 @@ class UniversalDownloader:
             return match.group(1)
         return None
     
-    def download_content(self, url, custom_path=None, client_id=None, cookies_path=None):
+    def download_content(self, url, custom_path=None, client_id=None, cookies_path=None,
+                         quality='Best Available', subtitles=False):
         """Main download function"""
         path = custom_path or DOWNLOAD_DIR
         platform = self.detect_platform(url)
@@ -499,7 +553,7 @@ class UniversalDownloader:
         
         try:
             if platform == 'youtube':
-                return self.download_youtube_content(url, download_folder, client_id, cookies_path)
+                return self.download_youtube_content(url, download_folder, client_id, cookies_path, quality, subtitles)
             elif platform == 'instagram':
                 return self.download_instagram_content(url, download_folder, client_id)
             elif platform == 'tiktok':
@@ -576,6 +630,8 @@ def download():
         data = request.get_json()
         url = data.get('url', '').strip()
         client_id = data.get('client_id')
+        quality = data.get('quality', 'Best Available')
+        subtitles = data.get('subtitles', False)
         
         if not url:
             return jsonify({'status': 'error', 'message': 'URL is required'})
@@ -587,7 +643,10 @@ def download():
         platform = downloader.detect_platform(url)
         
         # Start download
-        result = downloader.download_content(url, client_id=client_id, cookies_path=cookies_path)
+        result = downloader.download_content(
+            url, client_id=client_id, cookies_path=cookies_path,
+            quality=quality, subtitles=subtitles
+        )
         result['platform'] = platform
         
         # Signal the SSE stream to close
@@ -606,6 +665,8 @@ def bulk_download():
         data = request.get_json()
         urls = data.get('urls', [])
         client_id = data.get('client_id')
+        quality = data.get('quality', 'Best Available')
+        subtitles = data.get('subtitles', False)
         
         if not urls:
             return jsonify({'status': 'error', 'message': 'URLs list is required'})
@@ -623,7 +684,10 @@ def bulk_download():
                         'eta': '...'
                     })
                 
-                result = downloader.download_content(url.strip(), client_id=client_id, cookies_path=cookies_path)
+                result = downloader.download_content(
+                    url.strip(), client_id=client_id, cookies_path=cookies_path,
+                    quality=quality, subtitles=subtitles
+                )
                 result['url'] = url
                 results.append(result)
         

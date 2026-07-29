@@ -118,6 +118,58 @@ class UniversalDownloader:
         return m.group(1) if m else None
 
     # ── per-platform downloaders ──────────────────────────────────────────
+    # Quality-based format strings.
+    # Priority within each string:
+    #   1. H.264 (avc1) + AAC (mp4a) — plays natively in every Windows player
+    #   2. H.264 + any audio          — at least no video re-encoding needed
+    #   3. Best video  + AAC audio    — good audio; video may be VP9
+    #   4. Best video  + any audio    — audio fixed by postprocessor to AAC
+    #   5. best (pre-merged)          — last resort; usually ≤720p but safe
+    _QUALITY_FORMATS = {
+        'Best Available': [
+            'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc1]+bestaudio/bestvideo+bestaudio[acodec^=mp4a]/bestvideo+bestaudio/best',
+            'bestvideo+bestaudio/best',
+            'best',
+        ],
+        '1080p (Full HD)': [
+            'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=1080][vcodec^=avc1]+bestaudio/bestvideo[height<=1080]+bestaudio[acodec^=mp4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+            'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+            'best',
+        ],
+        '720p (HD)': [
+            'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=720][vcodec^=avc1]+bestaudio/bestvideo[height<=720]+bestaudio[acodec^=mp4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+            'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+            'best',
+        ],
+        '480p': [
+            'bestvideo[height<=480][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=480][vcodec^=avc1]+bestaudio/bestvideo[height<=480]+bestaudio[acodec^=mp4a]/bestvideo[height<=480]+bestaudio/best[height<=480]/best',
+            'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
+            'best',
+        ],
+    }
+
+    @staticmethod
+    def _count_subtitle_files(path: str) -> int:
+        subtitle_exts = {'.srt', '.vtt', '.ass', '.lrc'}
+        total = 0
+        for root, _, files in os.walk(path):
+            for name in files:
+                if os.path.splitext(name)[1].lower() in subtitle_exts:
+                    total += 1
+        return total
+
+    @staticmethod
+    def _youtube_subtitle_opts():
+        return {
+            'writesubtitles': True,
+            'writeautomaticsub': True,
+            'subtitleslangs': ['en', 'en-US', 'hi', 'all'],
+            'subtitlesformat': 'srt/best',
+            'postprocessors': [
+                {'key': 'FFmpegSubtitlesConvertor', 'format': 'srt'}
+            ],
+        }
+
     def _ydl_opts(self, path: str, template: str, fmt: str = 'best'):
         opts = {
             'outtmpl': os.path.join(path, template),
@@ -126,26 +178,63 @@ class UniversalDownloader:
             'ignoreerrors': True,
             'quiet': True,
             'no_warnings': True,
+            # Re-encode audio to AAC so videos play in Films & TV and all
+            # Windows-native players (which lack Opus codec support).
+            # Video stream is copied — no re-encoding, no quality loss.
+            # These args only apply when ffmpeg runs (e.g. DASH stream merging).
+            'postprocessor_args': {
+                'ffmpeg': ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
+            },
         }
         if FFMPEG_PATH:
             opts['ffmpeg_location'] = FFMPEG_PATH
         return opts
 
-    def download_youtube(self, url, path, progress_cb=None):
-        opts = self._ydl_opts(
-            path,
-            '%(uploader)s - %(title)s.%(ext)s',
-            'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+    def download_youtube(self, url, path, progress_cb=None,
+                         quality='Best Available', subtitles=False):
+        """Download a YouTube video/short/playlist.
+
+        Args:
+            quality:   One of the _QUALITY_FORMATS keys (default 'Best Available').
+            subtitles: If True, also download English subtitles as .srt files.
+        """
+        format_attempts = self._QUALITY_FORMATS.get(
+            quality, self._QUALITY_FORMATS['Best Available']
         )
-        if progress_cb:
-            opts['progress_hooks'] = [progress_cb]
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            if info and 'entries' in info:
-                titles = [e.get('title', '?') for e in info['entries'] if e]
-                return {'status': 'success', 'message': f'Downloaded {len(titles)} videos from playlist'}
-            title = info.get('title', 'Unknown') if info else 'Unknown'
-            return {'status': 'success', 'message': f'Downloaded: {title}'}
+        last_error = None
+
+        for fmt in format_attempts:
+            try:
+                opts = self._ydl_opts(
+                    path,
+                    '%(uploader)s - %(title)s.%(ext)s',
+                    fmt,
+                )
+                if subtitles:
+                    opts.update(self._youtube_subtitle_opts())
+                if progress_cb:
+                    opts['progress_hooks'] = [progress_cb]
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    sub_count = self._count_subtitle_files(path) if subtitles else 0
+                    sub_note = f' + {sub_count} subtitle file(s)' if sub_count else ''
+                    if info and 'entries' in info:
+                        titles = [e.get('title', '?') for e in info['entries'] if e]
+                        return {'status': 'success', 'message': f'Downloaded {len(titles)} videos from playlist{sub_note}'}
+                    title = info.get('title', 'Unknown') if info else 'Unknown'
+                    height = info.get('height', 0) if info else 0
+                    res_tag = f' ({height}p)' if height else ''
+                    return {'status': 'success', 'message': f'Downloaded: {title}{res_tag}{sub_note}'}
+            except yt_dlp.utils.DownloadError as e:
+                last_error = str(e)
+                if 'Requested format' in last_error or 'No video formats' in last_error or 'Only images' in last_error:
+                    continue  # Try next format in the fallback chain
+                break
+            except Exception as e:
+                last_error = str(e)
+                break
+
+        return {'status': 'error', 'message': last_error or 'Unable to download this YouTube video.'}
 
     def download_instagram(self, url, path, progress_cb=None):
         loader = instaloader.Instaloader(
@@ -192,7 +281,8 @@ class UniversalDownloader:
             title = info.get('title', label) if info else label
             return {'status': 'success', 'message': f'Downloaded: {title}'}
 
-    def download_content(self, url: str, progress_cb=None) -> dict:
+    def download_content(self, url: str, progress_cb=None,
+                         quality='Best Available', subtitles=False) -> dict:
         """Main entry point — download content from *url*."""
         plat = self.detect_platform(url)
         ts = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -201,7 +291,7 @@ class UniversalDownloader:
 
         try:
             if plat == 'youtube':
-                return self.download_youtube(url, folder, progress_cb)
+                return self.download_youtube(url, folder, progress_cb, quality, subtitles)
             elif plat == 'instagram':
                 return self.download_instagram(url, folder, progress_cb)
             else:
@@ -391,6 +481,44 @@ class AnyVideoApp(ctk.CTk):
             command=self._start_single_download,
         )
         self.download_btn.pack(side='right')
+        
+        # ── options row: quality selector + subtitle toggle ───────────────
+        options_row = ctk.CTkFrame(inner, fg_color='transparent')
+        options_row.pack(fill='x', pady=(12, 0))
+
+        ctk.CTkLabel(
+            options_row, text='Quality:',
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            text_color=COLORS['text_secondary'],
+        ).pack(side='left')
+
+        self.quality_var = ctk.StringVar(value='Best Available')
+        ctk.CTkOptionMenu(
+            options_row,
+            values=['Best Available', '1080p (Full HD)', '720p (HD)', '480p'],
+            variable=self.quality_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            fg_color=COLORS['bg_input'],
+            button_color=COLORS['accent'],
+            button_hover_color=COLORS['accent_hover'],
+            text_color=COLORS['text_primary'],
+            dropdown_fg_color=COLORS['bg_card'],
+            dropdown_hover_color=COLORS['bg_hover'],
+            dropdown_text_color=COLORS['text_primary'],
+            width=180,
+        ).pack(side='left', padx=(8, 0))
+
+        self.subtitles_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            options_row, text='Download Subtitles (.srt)',
+            variable=self.subtitles_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            text_color=COLORS['text_secondary'],
+            fg_color=COLORS['accent'],
+            hover_color=COLORS['accent_hover'],
+            checkmark_color='#000000',
+            border_color=COLORS['border'],
+        ).pack(side='left', padx=(20, 0))
 
         # ── platform badge
         self.platform_badge = ctk.CTkLabel(
@@ -683,13 +811,20 @@ class AnyVideoApp(ctk.CTk):
         if self._is_downloading:
             return
 
+        # Tkinter variables must be read on the main UI thread.
+        quality = self.quality_var.get()
+        subtitles = self.subtitles_var.get()
+
         self.result_label.pack_forget()
         self._set_downloading(True)
         self._set_status('Starting download…', COLORS['accent'])
 
         def worker():
             try:
-                result = self.downloader.download_content(url, progress_cb=self._progress_hook)
+                result = self.downloader.download_content(
+                    url, progress_cb=self._progress_hook,
+                    quality=quality, subtitles=subtitles
+                )
                 is_err = result.get('status') != 'success'
                 msg = result.get('message', 'Done')
                 self.after(0, lambda: self._show_result(msg, is_err))
@@ -714,6 +849,10 @@ class AnyVideoApp(ctk.CTk):
         if self._is_downloading:
             return
 
+        # Tkinter variables must be read on the main UI thread.
+        quality = self.quality_var.get()
+        subtitles = self.subtitles_var.get()
+
         self._set_downloading(True)
         self._set_status('Bulk download starting…', COLORS['accent'])
 
@@ -726,7 +865,10 @@ class AnyVideoApp(ctk.CTk):
                 self.after(0, lambda i=i, t=total: self._set_status(
                     f'Bulk: {i}/{t}', COLORS['accent']))
                 try:
-                    r = self.downloader.download_content(url, progress_cb=self._progress_hook)
+                    r = self.downloader.download_content(
+                        url, progress_cb=self._progress_hook,
+                        quality=quality, subtitles=subtitles
+                    )
                     if r.get('status') == 'success':
                         success += 1
                 except Exception:
